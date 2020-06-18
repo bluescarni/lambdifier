@@ -9,10 +9,14 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -47,7 +51,7 @@ std::string llvm_state::dump() const
     return out;
 }
 
-void llvm_state::emit(const std::string &name, const expression &e)
+void llvm_state::emit(const std::string &name, const expression &e, bool optimize)
 {
     if (module.getNamedValue(name) != nullptr) {
         throw std::invalid_argument("The name '" + name + "' already exists in the module");
@@ -95,6 +99,18 @@ void llvm_state::emit(const std::string &name, const expression &e)
             f->eraseFromParent();
 
             throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
+        }
+
+        if (optimize) {
+            llvm::legacy::FunctionPassManager fpm(&module);
+
+            fpm.add(llvm::createInstructionCombiningPass());
+            fpm.add(llvm::createReassociatePass());
+            fpm.add(llvm::createGVNPass());
+            fpm.add(llvm::createCFGSimplificationPass());
+            fpm.doInitialization();
+
+            fpm.run(*f);
         }
     } else {
         // Error reading body, remove function.

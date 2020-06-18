@@ -142,7 +142,7 @@ find_package(LLVM REQUIRED)
 add_library(lambdifier::llvm_headers INTERFACE IMPORTED)
 set_target_properties(lambdifier::llvm_headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LLVM_INCLUDE_DIRS}")
 
-llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support)
+llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts)
 target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers ${LAMBDIFIER_LLVM_LIBS})
 
 if(LAMBDIFIER_BUILD_TESTS)

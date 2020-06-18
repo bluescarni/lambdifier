@@ -15,6 +15,9 @@ int main()
     auto y = "y"_var;
 
     auto ex = c1 * (x + y);
+    ex = (ex + ex) * ex;
+    ex = ex * ex * ex * ex * ex * ex * ex;
+    ex = ex / 13_num;
 
     s.emit("fappo", ex);
 
