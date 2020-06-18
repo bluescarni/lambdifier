@@ -34,7 +34,7 @@ if(YACMA_COMPILER_IS_MSVC)
   list(APPEND LAMBDIFIER_CXX_FLAGS_DEBUG "-DNOMINMAX" "/bigobj" "-DWIN32_LEAN_AND_MEAN")
   list(APPEND LAMBDIFIER_CXX_FLAGS_RELEASE "-DNOMINMAX" "/bigobj" "-DWIN32_LEAN_AND_MEAN")
   if(YACMA_COMPILER_IS_CLANGXX)
-    # clang-cl emits various warnings from GMP/MPFR, let's just silence them.
+    # clang-cl emits various warnings, let's just silence them.
     # NOTE: at one point in the recent past, MSVC added an options similar to GCC's isystem:
     # https://blogs.msdn.microsoft.com/vcblog/2017/12/13/broken-warnings-theory/
     # We probably just need to wait for this to be picked up by CMake/clang-cl. Let's

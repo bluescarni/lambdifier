@@ -1,6 +1,7 @@
 #ifndef LAMBDIFIER_LLVM_STATE_HPP
 #define LAMBDIFIER_LLVM_STATE_HPP
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -19,7 +20,7 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
 {
     llvm::LLVMContext context;
     llvm::IRBuilder<> builder;
-    llvm::Module module;
+    std::unique_ptr<llvm::Module> module;
     std::unordered_map<std::string, llvm::Value *> named_values;
 
 public:

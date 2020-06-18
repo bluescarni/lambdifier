@@ -1,4 +1,5 @@
 #include <cassert>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -10,6 +11,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
@@ -24,7 +26,10 @@
 namespace lambdifier
 {
 
-llvm_state::llvm_state(const std::string &name) : context{}, builder(context), module(name, context) {}
+llvm_state::llvm_state(const std::string &name)
+    : context{}, builder(context), module(std::make_unique<llvm::Module>(name, context))
+{
+}
 
 llvm_state::~llvm_state() = default;
 
@@ -47,13 +52,13 @@ std::string llvm_state::dump() const
 {
     std::string out;
     llvm::raw_string_ostream ostr(out);
-    module.print(ostr, nullptr);
+    module->print(ostr, nullptr);
     return out;
 }
 
 void llvm_state::emit(const std::string &name, const expression &e, bool optimize)
 {
-    if (module.getNamedValue(name) != nullptr) {
+    if (module->getNamedValue(name) != nullptr) {
         throw std::invalid_argument("The name '" + name + "' already exists in the module");
     }
 
@@ -67,7 +72,7 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
     auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(context), fargs, false);
     assert(ft != nullptr);
     // Now create the prototype.
-    auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, &module);
+    auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
     assert(f != nullptr);
 
     // Set names for all arguments.
@@ -102,7 +107,7 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
         }
 
         if (optimize) {
-            llvm::legacy::FunctionPassManager fpm(&module);
+            llvm::legacy::FunctionPassManager fpm(module.get());
 
             fpm.add(llvm::createInstructionCombiningPass());
             fpm.add(llvm::createReassociatePass());
