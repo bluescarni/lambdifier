@@ -9,6 +9,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
+#include <lambdifier/detail/fwd_decl.hpp>
 #include <lambdifier/detail/visibility.hpp>
 
 namespace lambdifier
@@ -28,6 +29,8 @@ public:
     llvm_state(llvm_state &&) = delete;
     llvm_state &operator=(const llvm_state &) = delete;
     llvm_state &operator=(llvm_state &&) = delete;
+
+    void emit(const std::string &, const expression &);
 
     ~llvm_state();
 

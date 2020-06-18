@@ -8,21 +8,15 @@ using namespace lambdifier::literals;
 
 int main()
 {
-    lambdifier::llvm_state s{"my llvm state"};
+    lambdifier::llvm_state s{"my llvm module"};
 
     auto c1 = 42_num;
-    auto c2 = -42_num;
     auto x = "x"_var;
     auto y = "y"_var;
-    auto z = "z"_var;
 
-    auto ex = (x + (c1 * y - z)) - c2;
-    ex = ex * ex + ex;
+    auto ex = c1 * (x + y);
 
-    std::cout << ex << '\n';
+    s.emit("fappo", ex);
 
-    auto vars = ex.get_variables();
-    for (auto v : vars) {
-        std::cout << v << '\n';
-    }
+    std::cout << s.dump() << '\n';
 }

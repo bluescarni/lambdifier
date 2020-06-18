@@ -11,6 +11,7 @@
 
 #include <llvm/IR/Value.h>
 
+#include <lambdifier/detail/fwd_decl.hpp>
 #include <lambdifier/detail/visibility.hpp>
 #include <lambdifier/llvm_state.hpp>
 
@@ -66,8 +67,6 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
 };
 
 } // namespace detail
-
-class expression;
 
 template <typename T>
 concept ud_expr
