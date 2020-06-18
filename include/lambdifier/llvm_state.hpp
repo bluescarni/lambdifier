@@ -30,9 +30,9 @@ public:
     llvm_state &operator=(const llvm_state &) = delete;
     llvm_state &operator=(llvm_state &&) = delete;
 
-    void emit(const std::string &, const expression &, bool = true);
-
     ~llvm_state();
+
+    void emit(const std::string &, const expression &, bool = true);
 
     llvm::LLVMContext &get_context();
     llvm::IRBuilder<> &get_builder();
