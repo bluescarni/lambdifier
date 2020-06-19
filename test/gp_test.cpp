@@ -13,7 +13,7 @@ using namespace lambdifier;
 
 static std::random_device rd;
 static std::mt19937 gen(rd());
-static std::uniform_int_distribution<unsigned> random_all(0,3);
+static std::uniform_int_distribution<unsigned> random_all(0, 3);
 static std::uniform_real_distribution<double> rng01(0., 1.);
 
 enum kernel_types { number_t, variable_t, unary_t, binary_t };
@@ -47,26 +47,22 @@ lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth,
         type = random_all(gen);
     }
     switch (type) {
-        case kernel_types::number_t:
-        {
+        case kernel_types::number_t: {
             auto value = *random_element(allowed_numbers.begin(), allowed_numbers.end(), gen);
             return expression{number{value}};
             break;
         }
-        case kernel_types::variable_t:
-        {
+        case kernel_types::variable_t: {
             auto value = *random_element(allowed_variables.begin(), allowed_variables.end(), gen);
             return expression{variable{value}};
             break;
         }
-        case kernel_types::unary_t:
-        {
+        case kernel_types::unary_t: {
             auto value = *random_element(allowed_func.begin(), allowed_func.end(), gen);
             return expression{function_call(value, std::vector{random_expression(min_depth, max_depth, depth + 1)})};
             break;
         }
-        case kernel_types::binary_t:
-        {
+        case kernel_types::binary_t: {
             auto value = *random_element(allowed_bo.begin(), allowed_bo.end(), gen);
             return expression{binary_operator{value, random_expression(min_depth, max_depth, depth + 1),
                                               random_expression(min_depth, max_depth, depth + 1)}};
@@ -91,17 +87,32 @@ void mutate(lambdifier::expression &ex, double mut_p, unsigned depth)
     }
 }
 
+lambdifier::expression random_subtree(const lambdifier::expression &ex, double p)
+{
+    if (rng01(gen) < p) {
+        return ex;
+    } else if (auto bo_ptr = ex.extract<binary_operator>()) {
+        return (rng01(gen) < 0.5) ? random_subtree(bo_ptr->get_lhs(), p) : random_subtree(bo_ptr->get_rhs(), p);
+    } else if (auto call_ptr = ex.extract<function_call>()) {
+        auto exs = call_ptr->get_args();
+        return random_subtree(*random_element(exs.begin(), exs.end(), gen), p);
+    }
+    return ex;
+}
+
 int main()
 {
     auto ex = random_expression(4, 10, 0);
     std::cout << ex << "\n";
-    // Init the LLVM machinery.
-    lambdifier::llvm_state s{"unoptimized"};
-    lambdifier::llvm_state s_opt{"optimized"};
+    std::cout << random_subtree(ex, 0.2) << "\n";
 
-    s_opt.add_expression("f", ex, true);
-    s.add_expression("f", ex, false);
-    std::cout << s.dump() << '\n';
-    std::cout << s_opt.dump() << '\n';
+    // Init the LLVM machinery.
+    // lambdifier::llvm_state s{"unoptimized"};
+    // lambdifier::llvm_state s_opt{"optimized"};
+    //
+    // s_opt.add_expression("f", ex, true);
+    // s.add_expression("f", ex, false);
+    // std::cout << s.dump() << '\n';
+    // std::cout << s_opt.dump() << '\n';
     return 0;
 }
