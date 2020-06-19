@@ -92,6 +92,16 @@ std::string function_call::to_string() const
     return retval;
 }
 
+void function_call::set_name(std::string n)
+{
+    name = std::move(n);
+}
+
+void function_call::set_args(std::vector<expression> v)
+{
+    args = std::move(v);
+}
+
 namespace detail
 {
 

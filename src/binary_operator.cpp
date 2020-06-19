@@ -1,6 +1,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <llvm/IR/Value.h>
 
@@ -31,6 +32,16 @@ const expression &binary_operator::get_lhs() const
 const expression &binary_operator::get_rhs() const
 {
     return rhs;
+}
+
+void binary_operator::set_lhs(expression e)
+{
+    lhs = std::move(e);
+}
+
+void binary_operator::set_rhs(expression e)
+{
+    rhs = std::move(e);
 }
 
 llvm::Value *binary_operator::codegen(llvm_state &s) const

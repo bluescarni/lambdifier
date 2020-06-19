@@ -25,6 +25,8 @@ public:
 
     const expression &get_lhs() const;
     const expression &get_rhs() const;
+    void set_lhs(expression);
+    void set_rhs(expression);
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;

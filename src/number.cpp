@@ -33,6 +33,11 @@ std::string number::to_string() const
     return std::to_string(value);
 }
 
+void number::set_value(double x)
+{
+    value = x;
+}
+
 inline namespace literals
 {
 

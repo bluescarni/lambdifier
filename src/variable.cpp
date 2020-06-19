@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <llvm/IR/Value.h>
 
@@ -35,6 +36,11 @@ std::string variable::get_name() const
 std::string variable::to_string() const
 {
     return name;
+}
+
+void variable::set_name(std::string s)
+{
+    name = std::move(s);
 }
 
 inline namespace literals

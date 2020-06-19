@@ -27,6 +27,8 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+
+    void set_name(std::string);
 };
 
 inline namespace literals

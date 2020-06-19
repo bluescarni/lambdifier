@@ -26,6 +26,8 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+
+    void set_value(double);
 };
 
 inline namespace literals
