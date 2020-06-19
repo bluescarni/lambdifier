@@ -33,7 +33,7 @@ std::once_flag nt_inited;
 
 jit::jit()
     : object_layer(es, []() { return std::make_unique<llvm::SectionMemoryManager>(); }),
-      ctx(llvm::make_unique<llvm::LLVMContext>())
+      ctx(std::make_unique<llvm::LLVMContext>())
 {
     std::call_once(detail::nt_inited, []() {
         llvm::InitializeNativeTarget();
