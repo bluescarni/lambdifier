@@ -1,8 +1,10 @@
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <llvm/IR/BasicBlock.h>
@@ -15,6 +17,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/Scalar.h>
@@ -27,20 +30,25 @@ namespace lambdifier
 {
 
 llvm_state::llvm_state(const std::string &name)
-    : context{}, builder(context), module(std::make_unique<llvm::Module>(name, context))
 {
+    // Create the module.
+    module = llvm::make_unique<llvm::Module>(name, get_context());
+    module->setDataLayout(jitter.get_data_layout());
+
+    // Create a new builder for the module.
+    builder = llvm::make_unique<llvm::IRBuilder<>>(get_context());
 }
 
 llvm_state::~llvm_state() = default;
 
 llvm::LLVMContext &llvm_state::get_context()
 {
-    return context;
+    return jitter.get_context();
 }
 
 llvm::IRBuilder<> &llvm_state::get_builder()
 {
-    return builder;
+    return *builder;
 }
 
 std::unordered_map<std::string, llvm::Value *> &llvm_state::get_named_values()
@@ -56,7 +64,7 @@ std::string llvm_state::dump() const
     return out;
 }
 
-void llvm_state::emit(const std::string &name, const expression &e, bool optimize)
+void llvm_state::add_expression(const std::string &name, const expression &e, bool optimize)
 {
     if (module->getNamedValue(name) != nullptr) {
         throw std::invalid_argument("The name '" + name + "' already exists in the module");
@@ -67,9 +75,9 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
     const auto vars = e.get_variables();
 
     // Prepare the function prototype. First the function arguments.
-    std::vector<llvm::Type *> fargs(vars.size(), llvm::Type::getDoubleTy(context));
+    std::vector<llvm::Type *> fargs(vars.size(), llvm::Type::getDoubleTy(get_context()));
     // Then the return type.
-    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(context), fargs, false);
+    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
     assert(ft != nullptr);
     // Now create the prototype.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
@@ -82,9 +90,9 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
     }
 
     // Create a new basic block to start insertion into.
-    auto *bb = llvm::BasicBlock::Create(context, "entry", f);
+    auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
     assert(bb != nullptr);
-    builder.SetInsertPoint(bb);
+    builder->SetInsertPoint(bb);
 
     // Record the function arguments in the NamedValues map.
     named_values.clear();
@@ -94,7 +102,7 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
 
     if (auto *ret_val = e.codegen(*this)) {
         // Finish off the function.
-        builder.CreateRet(ret_val);
+        builder->CreateRet(ret_val);
 
         // Validate the generated code, checking for consistency.
         std::string err_report;
@@ -121,6 +129,18 @@ void llvm_state::emit(const std::string &name, const expression &e, bool optimiz
         // Error reading body, remove function.
         f->eraseFromParent();
     }
+}
+
+void llvm_state::compile()
+{
+    jitter.add_module(std::move(module));
+}
+
+std::uintptr_t llvm_state::fetch(const std::string &name)
+{
+    auto sym = llvm::ExitOnError()(jitter.lookup(name));
+
+    return static_cast<std::uintptr_t>(sym.getAddress());
 }
 
 } // namespace lambdifier

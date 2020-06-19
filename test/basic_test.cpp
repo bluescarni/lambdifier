@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 
 #include <lambdifier/llvm_state.hpp>
@@ -8,18 +9,29 @@ using namespace lambdifier::literals;
 
 int main()
 {
+    // Init the LLVM machinery.
     lambdifier::llvm_state s{"my llvm module"};
 
-    auto c1 = 42_num;
+    // Build the expression 42 * (x + y).
+    auto c = 42_num;
     auto x = "x"_var;
     auto y = "y"_var;
+    auto ex = c * (x + y);
+    ex = ex * ex * ex * ex * ex * ex * ex * ex * ex;
 
-    auto ex = c1 * (x + y);
-    ex = (ex + ex) * ex;
-    ex = ex * ex * ex * ex * ex * ex * ex;
-    ex = ex / 13_num;
-
-    s.emit("fappo", ex);
+    // Add the expression as a function of x and y
+    // called "fappo" to the module.
+    s.add_expression("fappo", ex);
 
     std::cout << s.dump() << '\n';
+    std::cout << ex << '\n';
+
+    // Compile all the functions in the module.
+    s.compile();
+
+    // Fetch the compiled function.
+    auto func = reinterpret_cast<double (*)(double, double)>(s.fetch("fappo"));
+
+    // Invoke it.
+    std::cout << func(1, 2) << '\n';
 }

@@ -110,6 +110,7 @@ set(LAMBDIFIER_SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/number.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/binary_operator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/variable.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/jit.cpp"
 )
 
 # Setup of the lambdifier shared library.
@@ -142,7 +143,7 @@ find_package(LLVM REQUIRED)
 add_library(lambdifier::llvm_headers INTERFACE IMPORTED)
 set_target_properties(lambdifier::llvm_headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LLVM_INCLUDE_DIRS}")
 
-llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts)
+llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts orcjit executionengine x86codegen x86info x86desc x86asmparser)
 target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers ${LAMBDIFIER_LLVM_LIBS})
 
 if(LAMBDIFIER_BUILD_TESTS)

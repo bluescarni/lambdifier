@@ -1,6 +1,7 @@
 #ifndef LAMBDIFIER_LLVM_STATE_HPP
 #define LAMBDIFIER_LLVM_STATE_HPP
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/detail/fwd_decl.hpp>
+#include <lambdifier/detail/jit.hpp>
 #include <lambdifier/detail/visibility.hpp>
 
 namespace lambdifier
@@ -18,9 +20,9 @@ namespace lambdifier
 
 class LAMBDIFIER_DLL_PUBLIC llvm_state
 {
-    llvm::LLVMContext context;
-    llvm::IRBuilder<> builder;
+    detail::jit jitter;
     std::unique_ptr<llvm::Module> module;
+    std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unordered_map<std::string, llvm::Value *> named_values;
 
 public:
@@ -33,13 +35,17 @@ public:
 
     ~llvm_state();
 
-    void emit(const std::string &, const expression &, bool = true);
+    void add_expression(const std::string &, const expression &, bool = true);
 
     llvm::LLVMContext &get_context();
     llvm::IRBuilder<> &get_builder();
     std::unordered_map<std::string, llvm::Value *> &get_named_values();
 
     std::string dump() const;
+
+    void compile();
+
+    std::uintptr_t fetch(const std::string &);
 };
 
 } // namespace lambdifier
