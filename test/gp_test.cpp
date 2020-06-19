@@ -60,8 +60,13 @@ int main()
 {
     auto ex = random_expression(4, 7, 0);
     std::cout << ex << "\n";
-    mutate(ex, 0.2, 0);
+    // Init the LLVM machinery.
+    lambdifier::llvm_state s{"my llvm module"};
+    s.add_expression("f", ex);
+    mutate(ex, 0.3, 0);
     std::cout << ex << "\n";
+    s.add_expression("f_mutated", ex);
+    std::cout << s.dump() << '\n';
 
     return 0;
 }
