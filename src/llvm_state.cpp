@@ -32,11 +32,11 @@ namespace lambdifier
 llvm_state::llvm_state(const std::string &name)
 {
     // Create the module.
-    module = llvm::make_unique<llvm::Module>(name, get_context());
+    module = std::make_unique<llvm::Module>(name, get_context());
     module->setDataLayout(jitter.get_data_layout());
 
     // Create a new builder for the module.
-    builder = llvm::make_unique<llvm::IRBuilder<>>(get_context());
+    builder = std::make_unique<llvm::IRBuilder<>>(get_context());
 }
 
 llvm_state::~llvm_state() = default;

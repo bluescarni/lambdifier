@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 
+#include <llvm/Config/llvm-config.h>
 #include <llvm/ExecutionEngine/JITSymbol.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
@@ -33,7 +34,11 @@ std::once_flag nt_inited;
 
 jit::jit()
     : object_layer(es, []() { return std::make_unique<llvm::SectionMemoryManager>(); }),
-      ctx(llvm::make_unique<llvm::LLVMContext>())
+      ctx(std::make_unique<llvm::LLVMContext>())
+#if LLVM_VERSION_MAJOR == 10
+      ,
+      main_jd(es.createJITDylib("<main>"))
+#endif
 {
     std::call_once(detail::nt_inited, []() {
         llvm::InitializeNativeTarget();
@@ -52,15 +57,25 @@ jit::jit()
         throw std::invalid_argument("Error invoking getDefaultDataLayoutForTarget()");
     }
 
+#if LLVM_VERSION_MAJOR == 10
+    compile_layer = std::make_unique<llvm::orc::IRCompileLayer>(
+        es, object_layer, std::make_unique<llvm::orc::ConcurrentIRCompiler>(std::move(*jtmb)));
+#else
     compile_layer = std::make_unique<llvm::orc::IRCompileLayer>(es, object_layer,
                                                                 llvm::orc::ConcurrentIRCompiler(std::move(*jtmb)));
+#endif
 
     dl = std::make_unique<llvm::DataLayout>(std::move(*dlout));
 
     mangle = std::make_unique<llvm::orc::MangleAndInterner>(es, *dl);
 
+#if LLVM_VERSION_MAJOR == 10
+    main_jd.addGenerator(
+        llvm::cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(dl->getGlobalPrefix())));
+#else
     es.getMainJITDylib().setGenerator(
         llvm::cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(dl->getGlobalPrefix())));
+#endif
 }
 
 jit::~jit() = default;
@@ -77,17 +92,24 @@ const llvm::DataLayout &jit::get_data_layout() const
 
 void jit::add_module(std::unique_ptr<llvm::Module> &&m)
 {
-    auto handle = std::make_unique<llvm::Error>(
-        compile_layer->add(es.getMainJITDylib(), llvm::orc::ThreadSafeModule(std::move(m), ctx)));
+#if LLVM_VERSION_MAJOR == 10
+    auto handle = compile_layer->add(main_jd, llvm::orc::ThreadSafeModule(std::move(m), ctx));
+#else
+    auto handle = compile_layer->add(es.getMainJITDylib(), llvm::orc::ThreadSafeModule(std::move(m), ctx));
+#endif
 
-    if (*handle) {
+    if (handle) {
         throw;
     }
 }
 
 llvm::Expected<llvm::JITEvaluatedSymbol> jit::lookup(const std::string &name)
 {
+#if LLVM_VERSION_MAJOR == 10
+    return es.lookup({&main_jd}, (*mangle)(name));
+#else
     return es.lookup({&es.getMainJITDylib()}, (*mangle)(name));
+#endif
 }
 
 } // namespace lambdifier::detail
