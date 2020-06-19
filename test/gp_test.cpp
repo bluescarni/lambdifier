@@ -13,6 +13,7 @@ using namespace lambdifier;
 
 static std::random_device rd;
 static std::mt19937 gen(rd());
+static std::uniform_int_distribution<unsigned> random_all(0,3);
 static std::uniform_real_distribution<double> rng01(0., 1.);
 
 enum kernel_types { number_t, variable_t, unary_t, binary_t };
@@ -92,15 +93,15 @@ void mutate(lambdifier::expression &ex, double mut_p, unsigned depth)
 
 int main()
 {
-    auto ex = random_expression(4, 7, 0);
+    auto ex = random_expression(4, 10, 0);
     std::cout << ex << "\n";
     // Init the LLVM machinery.
-    lambdifier::llvm_state s{"my llvm module"};
-    s.add_expression("f", ex);
-    mutate(ex, 0.3, 0);
-    std::cout << ex << "\n";
-    s.add_expression("f_mutated", ex);
-    std::cout << s.dump() << '\n';
+    lambdifier::llvm_state s{"unoptimized"};
+    lambdifier::llvm_state s_opt{"optimized"};
 
+    s_opt.add_expression("f", ex, true);
+    s.add_expression("f", ex, false);
+    std::cout << s.dump() << '\n';
+    std::cout << s_opt.dump() << '\n';
     return 0;
 }
