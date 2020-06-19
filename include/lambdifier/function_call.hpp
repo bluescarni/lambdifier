@@ -27,6 +27,8 @@ public:
 
     const std::string &get_name() const;
     const std::vector<expression> &get_args() const;
+    std::vector<expression> &access_args();
+
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;

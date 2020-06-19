@@ -25,6 +25,8 @@ public:
 
     const expression &get_lhs() const;
     const expression &get_rhs() const;
+    expression &access_lhs();
+    expression &access_rhs();
     void set_lhs(expression);
     void set_rhs(expression);
 

@@ -34,6 +34,11 @@ const std::vector<expression> &function_call::get_args() const
     return args;
 }
 
+std::vector<expression> &function_call::access_args()
+{
+    return args;
+}
+
 llvm::Value *function_call::codegen(llvm_state &s) const
 {
     llvm::Function *callee_f;

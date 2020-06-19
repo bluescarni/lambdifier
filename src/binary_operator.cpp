@@ -34,6 +34,16 @@ const expression &binary_operator::get_rhs() const
     return rhs;
 }
 
+expression &binary_operator::access_lhs() 
+{
+    return lhs;
+}
+
+expression &binary_operator::access_rhs() 
+{
+    return rhs;
+}
+
 void binary_operator::set_lhs(expression e)
 {
     lhs = std::move(e);

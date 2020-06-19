@@ -118,6 +118,13 @@ public:
         return p == nullptr ? nullptr : &(p->m_value);
     }
 
+    template <typename T>
+    T *extract_unsafe() noexcept
+    {
+        auto p = dynamic_cast<detail::expr_inner<T> *>(ptr());
+        return p == nullptr ? nullptr : &(p->m_value);
+    }
+
     std::vector<std::string> get_variables() const;
 };
 
