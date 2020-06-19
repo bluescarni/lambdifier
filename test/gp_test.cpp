@@ -87,24 +87,54 @@ void mutate(lambdifier::expression &ex, double mut_p, unsigned depth)
     }
 }
 
-lambdifier::expression random_subtree(const lambdifier::expression &ex, double p)
+lambdifier::expression extract_random_subtree(const lambdifier::expression &ex, double cr_p)
 {
-    if (rng01(gen) < p) {
+    if (rng01(gen) < cr_p) {
         return ex;
     } else if (auto bo_ptr = ex.extract<binary_operator>()) {
-        return (rng01(gen) < 0.5) ? random_subtree(bo_ptr->get_lhs(), p) : random_subtree(bo_ptr->get_rhs(), p);
+        return (rng01(gen) < 0.5) ? extract_random_subtree(bo_ptr->get_lhs(), cr_p)
+                                  : extract_random_subtree(bo_ptr->get_rhs(), cr_p);
     } else if (auto call_ptr = ex.extract<function_call>()) {
         auto exs = call_ptr->get_args();
-        return random_subtree(*random_element(exs.begin(), exs.end(), gen), p);
+        return extract_random_subtree(*random_element(exs.begin(), exs.end(), gen), cr_p);
     }
     return ex;
 }
 
+void inject_subtree(lambdifier::expression &ex, const lambdifier::expression &sub_ex, double cr_p)
+{
+    if (rng01(gen) < cr_p) {
+        ex = sub_ex;
+    } else if (auto bo_ptr = ex.extract_unsafe<binary_operator>()) {
+        (rng01(gen) < 0.5) ? inject_subtree(bo_ptr->access_lhs(), sub_ex, cr_p)
+                           : inject_subtree(bo_ptr->access_rhs(), sub_ex, cr_p);
+    } else if (auto call_ptr = ex.extract_unsafe<function_call>()) {
+        auto exs = call_ptr->access_args();
+        inject_subtree(*random_element(exs.begin(), exs.end(), gen), sub_ex, cr_p);
+    } else {
+        ex = sub_ex;
+    }
+}
+
+void crossover(lambdifier::expression &ex1, lambdifier::expression &ex2, double cr_p)
+{
+    auto sub_ex1 = extract_random_subtree(ex1, cr_p);
+    auto sub_ex2 = extract_random_subtree(ex2, cr_p);
+    inject_subtree(ex1, sub_ex2, cr_p);
+    inject_subtree(ex2, sub_ex1, cr_p);
+}
+
 int main()
 {
-    auto ex = random_expression(4, 10, 0);
-    std::cout << ex << "\n";
-    std::cout << random_subtree(ex, 0.2) << "\n";
+    auto ex1 = random_expression(2, 4, 0);
+    auto ex2 = random_expression(2, 4, 0);
+
+    std::cout << "ex1: " << ex1 << "\n";
+    std::cout << "ex2: " << ex2 << "\n";
+    crossover(ex1, ex2, 0.3);
+    std::cout << "crossover" << "\n";
+    std::cout << "ex1: " << ex1 << "\n";
+    std::cout << "ex2: " << ex2 << "\n";
 
     // Init the LLVM machinery.
     // lambdifier::llvm_state s{"unoptimized"};
