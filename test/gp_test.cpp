@@ -20,25 +20,62 @@ static std::uniform_real_distribution<double> rng01(0., 1.);
 
 enum kernel_types { number_t, variable_t, unary_t, binary_t };
 
+static std::vector<char> allowed_bo = {'+', '-', '*', '/'};
+static std::vector<std::string> allowed_func = {"llvm.exp", "llvm.sin"};
+static std::vector<double> allowed_numbers = {3.14, -2.34};
+static std::vector<std::string> allowed_variables = {"x", "y"};
+
+template <typename Iter, typename rng>
+Iter random_element(Iter start, Iter end, rng &g)
+{
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(g));
+    return start;
+}
+
 lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth)
 {
     unsigned type;
     if (depth < min_depth) {
-        type = random_kernel(gen);
+        // We get a kernel
+        // probability to get any function or a bo is equal
+        type = (rng01(gen) < allowed_func.size() / (allowed_func.size() + allowed_bo.size())) ? 2 : 3;
     } else if (depth >= max_depth) {
-        type = random_terminal(gen);
+        // We get a terminal
+        // probability to get a terminal with an input variable or a constant is equal
+        type = (rng01(gen) < allowed_numbers.size() / (allowed_numbers.size() + allowed_variables.size())) ? 0 : 1;
     } else {
+        // We get whatever
         type = random_all(gen);
     }
-    if (type == kernel_types::number_t) {
-        return expression{number{3.14}};
-    } else if (type == kernel_types::variable_t) {
-        return expression{variable{"x"}};
-    } else if (type == kernel_types::unary_t) {
-        return expression{function_call("llvm.exp", std::vector{random_expression(min_depth, max_depth, depth + 1)})};
-    } else if (type == kernel_types::binary_t) {
-        return expression{binary_operator{'+', random_expression(min_depth, max_depth, depth + 1),
-                                          random_expression(min_depth, max_depth, depth + 1)}};
+    switch (type) {
+        case kernel_types::number_t:
+        {
+            auto value = *random_element(allowed_numbers.begin(), allowed_numbers.end(), gen);
+            return expression{number{value}};
+            break;
+        }
+        case kernel_types::variable_t:
+        {
+            auto value = *random_element(allowed_variables.begin(), allowed_variables.end(), gen);
+            return expression{variable{value}};
+            break;
+        }
+        case kernel_types::unary_t:
+        {
+            auto value = *random_element(allowed_func.begin(), allowed_func.end(), gen);
+            return expression{function_call(value, std::vector{random_expression(min_depth, max_depth, depth + 1)})};
+            break;
+        }
+        case kernel_types::binary_t:
+        {
+            auto value = *random_element(allowed_bo.begin(), allowed_bo.end(), gen);
+            return expression{binary_operator{value, random_expression(min_depth, max_depth, depth + 1),
+                                              random_expression(min_depth, max_depth, depth + 1)}};
+            break;
+        }
+        default:
+            throw;
     }
 }
 
