@@ -40,6 +40,7 @@ public:
     llvm::LLVMContext &get_context();
     llvm::IRBuilder<> &get_builder();
     std::unordered_map<std::string, llvm::Value *> &get_named_values();
+    llvm::Module &get_module();
 
     std::string dump() const;
 

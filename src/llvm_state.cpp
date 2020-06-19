@@ -51,6 +51,11 @@ llvm::IRBuilder<> &llvm_state::get_builder()
     return *builder;
 }
 
+llvm::Module &llvm_state::get_module()
+{
+    return *module;
+}
+
 std::unordered_map<std::string, llvm::Value *> &llvm_state::get_named_values()
 {
     return named_values;

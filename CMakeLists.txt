@@ -110,6 +110,8 @@ set(LAMBDIFIER_SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/number.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/binary_operator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/variable.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/function_call.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/math_functions.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/jit.cpp"
 )
 

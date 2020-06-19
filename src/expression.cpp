@@ -8,6 +8,7 @@
 
 #include <lambdifier/binary_operator.hpp>
 #include <lambdifier/expression.hpp>
+#include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
 #include <lambdifier/number.hpp>
 #include <lambdifier/variable.hpp>
@@ -53,6 +54,11 @@ std::vector<std::string> expression::get_variables() const
         retval.insert(retval.end(), r_vars.begin(), r_vars.end());
     } else if (auto var_ptr = extract<variable>()) {
         retval.push_back(var_ptr->get_name());
+    } else if (auto call_ptr = extract<function_call>()) {
+        for (const auto &ex : call_ptr->get_args()) {
+            auto vars = ex.get_variables();
+            retval.insert(retval.end(), vars.begin(), vars.end());
+        }
     }
 
     std::sort(retval.begin(), retval.end());
