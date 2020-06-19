@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+// #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -84,9 +85,11 @@ void llvm_state::add_expression(const std::string &name, const expression &e, bo
     // Then the return type.
     auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
     assert(ft != nullptr);
-    // Now create the prototype.
+    // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
     assert(f != nullptr);
+    // NOTE: check this in the future.
+    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
 
     // Set names for all arguments.
     decltype(vars.size()) idx = 0;
