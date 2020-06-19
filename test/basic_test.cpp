@@ -19,7 +19,7 @@ int main()
     auto x = "x"_var, y = "y"_var;
 
     s.add_expression("f", sin(c) * sin(c) + cos(c) * cos(c) + abs(x + y));
-    s.add_expression("g", "f"_func(x, y) + "f"_func(x, y));
+    // s.add_expression("g", "f"_func(x, y) + "f"_func(x, y));
 
     std::cout << s.dump() << '\n';
 
@@ -27,9 +27,18 @@ int main()
     s.compile();
 
     // Fetch the compiled function.
-    auto func = reinterpret_cast<double (*)(double[])>(s.fetch("f.vecargs"));
+    auto func1 = reinterpret_cast<double (*)(double[2])>(s.fetch("f.vecargs"));
+    auto func2 = reinterpret_cast<double (*)(double, double)>(s.fetch("f"));
 
     // Invoke it.
     double args[] = {1, 2};
-    std::cout << func(&args[0]) << '\n';
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+
+    std::cout << func2(1, 2) << '\n';
+    std::cout << func2(1, 2) << '\n';
+    std::cout << func2(1, 2) << '\n';
+    std::cout << func2(1, 2) << '\n';
 }

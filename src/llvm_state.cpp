@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -7,12 +8,10 @@
 #include <utility>
 #include <vector>
 
-// #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
@@ -75,15 +74,13 @@ void llvm_state::add_varargs_expression(const std::string &name, const expressio
                                         const std::vector<std::string> &vars)
 {
     // Prepare the function prototype. First the function arguments.
-    std::vector<llvm::Type *> fargs(vars.size(), llvm::Type::getDoubleTy(get_context()));
+    std::vector<llvm::Type *> fargs(vars.size(), builder->getDoubleTy());
     // Then the return type.
-    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
+    auto *ft = llvm::FunctionType::get(builder->getDoubleTy(), fargs, false);
     assert(ft != nullptr);
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
     assert(f != nullptr);
-    // NOTE: check this in the future.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
     // Set names for all arguments.
     decltype(vars.size()) idx = 0;
     for (auto &arg : f->args()) {
@@ -135,16 +132,24 @@ void llvm_state::add_varargs_expression(const std::string &name, const expressio
 void llvm_state::add_vecargs_expression(const std::string &name, const expression &e, bool optimize,
                                         const std::vector<std::string> &vars)
 {
-    // Prepare the function prototype. The only argument is an array.
-    std::vector<llvm::Type *> fargs(1, llvm::ArrayType::get(llvm::Type::getDoubleTy(get_context()), vars.size()));
+    // NOTE: we support indices within the unsigned range
+    // below (when using the CreateConstInBoundsGEP1_32()
+    // instruction).
+    if (vars.size() > std::numeric_limits<unsigned>::max()) {
+        throw std::overflow_error("The number of variables in an expression, " + std::to_string(vars.size())
+                                  + ", is too large");
+    }
+
+    // Prepare the function prototype. The only argument is a pointer.
+    std::vector<llvm::Type *> fargs(1, llvm::PointerType::getUnqual(builder->getDoubleTy()));
     // Then the return type.
-    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
+    auto *ft = llvm::FunctionType::get(builder->getDoubleTy(), fargs, false);
     assert(ft != nullptr);
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name + ".vecargs", module.get());
     assert(f != nullptr);
-    // NOTE: check this in the future.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
+    // Check about this.
+    // f->addFnAttr(llvm::Attribute::get(get_context(), "readonly"));
     // Set the name of the function argument.
     const auto arg_rng = f->args();
     assert(arg_rng.begin() != arg_rng.end() && arg_rng.begin() + 1 == arg_rng.end());
@@ -158,18 +163,37 @@ void llvm_state::add_vecargs_expression(const std::string &name, const expressio
 
     // Clear the map containing the variable names.
     named_values.clear();
+    // Copy the elements of the input array
+    // into local variables.
     for (decltype(vars.size()) i = 0; i < vars.size(); ++i) {
         const auto &var = vars[i];
 
-        // auto allo = builder->CreateAlloca(llvm::Type::getDoubleTy(get_context()), nullptr, var);
+        // NOTE: the purpose of this instruction is to compute
+        // a pointer to the current variable in the array.
+        // NOTE: we use the InBounds variant because that is
+        // also used when compiling similar array-loading
+        // code in clang. The docs say that it has something
+        // to do with poisoning, but it's not really clear
+        // to me what this implies. See here for more info:
+        // https://llvm.org/docs/LangRef.html#getelementptr-instruction
+        // https://stackoverflow.com/questions/26787341/inserting-getelementpointer-instruction-in-llvm-ir
+        // https://llvm.org/docs/GetElementPtr.html
+        // NOTE: we use the variants with 1d 32-bit indexing for
+        // simplicity.
+        auto ptr = builder->CreateConstInBoundsGEP1_32(
+            // The underlying type for the array.
+            builder->getDoubleTy(),
+            // The array (that is, the pointer argument passed
+            // to this function).
+            &vec_arg,
+            // The offset.
+            static_cast<unsigned>(i),
+            // Name for the pointer variable.
+            "ptr_" + var);
 
-        // Store the corresponding value from
-        // the array argument into the local variable.
-        // builder->CreateStore(builder->CreateExtractValue(&vec_arg, i), allo);
-
-        // named_values[var] = static_cast<llvm::Value *>(allo);
-
-        named_values[var] = static_cast<llvm::Value *>(llvm::ExtractValueInst::Create(&vec_arg, i, var, bb));
+        // Create a load instruction from the pointer
+        // into a new variable.
+        named_values[var] = builder->CreateLoad(builder->getDoubleTy(), ptr, var);
     }
 
     if (auto *ret_val = e.codegen(*this)) {

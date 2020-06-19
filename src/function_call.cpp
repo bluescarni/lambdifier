@@ -43,7 +43,7 @@ llvm::Value *function_call::codegen(llvm_state &s) const
         // the desired argument types. See:
         // https://stackoverflow.com/questions/11985247/llvm-insert-intrinsic-function-cos
         // And the docs of the getDeclaration() function.
-        const std::vector<llvm::Type *> doubles(args.size(), llvm::Type::getDoubleTy(s.get_context()));
+        const std::vector<llvm::Type *> doubles(args.size(), s.get_builder().getDoubleTy());
 
         // Intrinsic function.
         callee_f = llvm::Intrinsic::getDeclaration(&s.get_module(), intrinsic_ID, doubles);
