@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <llvm/Config/llvm-config.h>
 #include <llvm/ExecutionEngine/JITSymbol.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
@@ -26,6 +27,9 @@ class jit
     std::unique_ptr<llvm::DataLayout> dl;
     std::unique_ptr<llvm::orc::MangleAndInterner> mangle;
     llvm::orc::ThreadSafeContext ctx;
+#if LLVM_VERSION_MAJOR == 10
+    llvm::orc::JITDylib &main_jd;
+#endif
 
 public:
     jit();
