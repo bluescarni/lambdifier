@@ -12,6 +12,7 @@
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/detail/fwd_decl.hpp>
+#include <lambdifier/detail/type_traits.hpp>
 #include <lambdifier/detail/visibility.hpp>
 #include <lambdifier/llvm_state.hpp>
 
@@ -20,15 +21,6 @@ namespace lambdifier
 
 namespace detail
 {
-
-template <typename T>
-using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-
-template <class T, class U>
-concept same_helper = std::is_same_v<T, U>;
-
-template <class T, class U>
-concept same_as = same_helper<T, U> &&same_helper<U, T>;
 
 struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual ~expr_inner_base() {}

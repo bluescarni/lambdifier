@@ -6,6 +6,7 @@
 
 #include <llvm/IR/Value.h>
 
+#include <lambdifier/detail/type_traits.hpp>
 #include <lambdifier/detail/visibility.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -41,9 +42,12 @@ class LAMBDIFIER_DLL_PUBLIC function_caller
 public:
     explicit function_caller(const std::string &);
     template <typename... Args>
-    expression operator()(Args... args) const
+    requires(same_as<expression, Args> &&...) expression operator()(Args... args) const
     {
-        return expression{function_call(name, std::vector<expression>{args...})};
+        std::vector<expression> v;
+        (v.emplace_back(std::move(args)), ...);
+
+        return expression{function_call(name, std::move(v))};
     }
 };
 
