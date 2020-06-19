@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -7,15 +8,14 @@
 #include <utility>
 #include <vector>
 
-// #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Operator.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>
@@ -24,6 +24,7 @@
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
 
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -39,6 +40,18 @@ llvm_state::llvm_state(const std::string &name)
 
     // Create a new builder for the module.
     builder = std::make_unique<llvm::IRBuilder<>>(get_context());
+    // Set a couple of flags for faster math at the
+    // price of potential change of semantics.
+    builder->setFastMathFlags(llvm::FastMathFlags::AllowReassoc | llvm::FastMathFlags::AllowReciprocal);
+
+    // Create the function pass manager.
+    fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+    fpm->add(llvm::createPromoteMemoryToRegisterPass());
+    fpm->add(llvm::createInstructionCombiningPass());
+    fpm->add(llvm::createReassociatePass());
+    fpm->add(llvm::createGVNPass());
+    fpm->add(llvm::createCFGSimplificationPass());
+    fpm->doInitialization();
 }
 
 llvm_state::~llvm_state() = default;
@@ -71,19 +84,33 @@ std::string llvm_state::dump() const
     return out;
 }
 
+void llvm_state::verify_function(llvm::Function *f)
+{
+    std::string err_report;
+    llvm::raw_string_ostream ostr(err_report);
+    if (llvm::verifyFunction(*f, &ostr)) {
+        // Remove function before throwing.
+        f->eraseFromParent();
+        throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
+    }
+}
+
+void llvm_state::optimize_function(llvm::Function *f)
+{
+    fpm->run(*f);
+}
+
 void llvm_state::add_varargs_expression(const std::string &name, const expression &e, bool optimize,
                                         const std::vector<std::string> &vars)
 {
     // Prepare the function prototype. First the function arguments.
-    std::vector<llvm::Type *> fargs(vars.size(), llvm::Type::getDoubleTy(get_context()));
+    std::vector<llvm::Type *> fargs(vars.size(), builder->getDoubleTy());
     // Then the return type.
-    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
+    auto *ft = llvm::FunctionType::get(builder->getDoubleTy(), fargs, false);
     assert(ft != nullptr);
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
     assert(f != nullptr);
-    // NOTE: check this in the future.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
     // Set names for all arguments.
     decltype(vars.size()) idx = 0;
     for (auto &arg : f->args()) {
@@ -105,26 +132,12 @@ void llvm_state::add_varargs_expression(const std::string &name, const expressio
         // Finish off the function.
         builder->CreateRet(ret_val);
 
-        // Validate the generated code, checking for consistency.
-        std::string err_report;
-        llvm::raw_string_ostream ostr(err_report);
-        if (llvm::verifyFunction(*f, &ostr)) {
-            // Remove function before throwing.
-            f->eraseFromParent();
+        // Verify it.
+        verify_function(f);
 
-            throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
-        }
-
+        // Optimize it.
         if (optimize) {
-            llvm::legacy::FunctionPassManager fpm(module.get());
-
-            fpm.add(llvm::createInstructionCombiningPass());
-            fpm.add(llvm::createReassociatePass());
-            fpm.add(llvm::createGVNPass());
-            fpm.add(llvm::createCFGSimplificationPass());
-            fpm.doInitialization();
-
-            fpm.run(*f);
+            optimize_function(f);
         }
     } else {
         // Error reading body, remove function.
@@ -132,19 +145,26 @@ void llvm_state::add_varargs_expression(const std::string &name, const expressio
     }
 }
 
-void llvm_state::add_vecargs_expression(const std::string &name, const expression &e, bool optimize,
-                                        const std::vector<std::string> &vars)
+void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, const std::vector<std::string> &vars)
 {
-    // Prepare the function prototype. The only argument is an array.
-    std::vector<llvm::Type *> fargs(1, llvm::ArrayType::get(llvm::Type::getDoubleTy(get_context()), vars.size()));
+    // NOTE: we support indices within the unsigned range
+    // below (when using the CreateConstInBoundsGEP1_32()
+    // instruction).
+    if (vars.size() > std::numeric_limits<unsigned>::max()) {
+        throw std::overflow_error("The number of variables in an expression, " + std::to_string(vars.size())
+                                  + ", is too large");
+    }
+
+    // Prepare the function prototype. The only argument is a pointer.
+    std::vector<llvm::Type *> fargs(1, llvm::PointerType::getUnqual(builder->getDoubleTy()));
     // Then the return type.
-    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
+    auto *ft = llvm::FunctionType::get(builder->getDoubleTy(), fargs, false);
     assert(ft != nullptr);
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name + ".vecargs", module.get());
     assert(f != nullptr);
-    // NOTE: check this in the future.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
+    // Check about this.
+    // f->addFnAttr(llvm::Attribute::get(get_context(), "readonly"));
     // Set the name of the function argument.
     const auto arg_rng = f->args();
     assert(arg_rng.begin() != arg_rng.end() && arg_rng.begin() + 1 == arg_rng.end());
@@ -158,44 +178,66 @@ void llvm_state::add_vecargs_expression(const std::string &name, const expressio
 
     // Clear the map containing the variable names.
     named_values.clear();
+    // Copy the elements of the input array
+    // into local variables.
     for (decltype(vars.size()) i = 0; i < vars.size(); ++i) {
         const auto &var = vars[i];
 
-        // auto allo = builder->CreateAlloca(llvm::Type::getDoubleTy(get_context()), nullptr, var);
+        // NOTE: the purpose of this instruction is to compute
+        // a pointer to the current variable in the array.
+        // NOTE: we use the InBounds variant because that is
+        // also used when compiling similar array-loading
+        // code in clang. The docs say that it has something
+        // to do with poisoning, but it's not really clear
+        // to me what this implies. See here for more info:
+        // https://llvm.org/docs/LangRef.html#getelementptr-instruction
+        // https://stackoverflow.com/questions/26787341/inserting-getelementpointer-instruction-in-llvm-ir
+        // https://llvm.org/docs/GetElementPtr.html
+        // NOTE: we use the variants with 1d 32-bit indexing for
+        // simplicity.
+        auto ptr = builder->CreateConstInBoundsGEP1_32(
+            // The underlying type for the array.
+            builder->getDoubleTy(),
+            // The array (that is, the pointer argument passed
+            // to this function).
+            &vec_arg,
+            // The offset.
+            static_cast<unsigned>(i),
+            // Name for the pointer variable.
+            "ptr_" + var);
 
-        // Store the corresponding value from
-        // the array argument into the local variable.
-        // builder->CreateStore(builder->CreateExtractValue(&vec_arg, i), allo);
-
-        // named_values[var] = static_cast<llvm::Value *>(allo);
-
-        named_values[var] = static_cast<llvm::Value *>(llvm::ExtractValueInst::Create(&vec_arg, i, var, bb));
+        // Create a load instruction from the pointer
+        // into a new variable.
+        named_values[var] = builder->CreateLoad(builder->getDoubleTy(), ptr, var);
     }
 
-    if (auto *ret_val = e.codegen(*this)) {
+    // NOTE: the idea now is that instead of re-generating
+    // the code for the expression, we do instead a function
+    // call to the varargs version of the function.
+    //
+    // Lookup the varargs function.
+    auto varargs_f = module->getFunction(name);
+    assert(varargs_f);
+    assert(varargs_f->arg_size() == vars.size());
+
+    // Create the function arguments.
+    std::vector<llvm::Value *> args_v;
+    args_v.reserve(vars.size());
+    for (const auto &var : vars) {
+        args_v.push_back(named_values[var]);
+    }
+
+    // Do the invocation.
+    if (auto *ret_val = builder->CreateCall(varargs_f, args_v, "calltmp")) {
         // Finish off the function.
         builder->CreateRet(ret_val);
 
-        // Validate the generated code, checking for consistency.
-        std::string err_report;
-        llvm::raw_string_ostream ostr(err_report);
-        if (llvm::verifyFunction(*f, &ostr)) {
-            // Remove function before throwing.
-            f->eraseFromParent();
+        // Verify it.
+        verify_function(f);
 
-            throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
-        }
-
+        // Optimize it.
         if (optimize) {
-            llvm::legacy::FunctionPassManager fpm(module.get());
-
-            fpm.add(llvm::createInstructionCombiningPass());
-            fpm.add(llvm::createReassociatePass());
-            fpm.add(llvm::createGVNPass());
-            fpm.add(llvm::createCFGSimplificationPass());
-            fpm.doInitialization();
-
-            fpm.run(*f);
+            optimize_function(f);
         }
     } else {
         // Error reading body, remove function.
@@ -214,7 +256,7 @@ void llvm_state::add_expression(const std::string &name, const expression &e, bo
     const auto vars = e.get_variables();
 
     add_varargs_expression(name, e, optimize, vars);
-    add_vecargs_expression(name, e, optimize, vars);
+    add_vecargs_expression(name, optimize, vars);
 }
 
 void llvm_state::compile()
@@ -222,11 +264,18 @@ void llvm_state::compile()
     jitter.add_module(std::move(module));
 }
 
-std::uintptr_t llvm_state::fetch(const std::string &name)
+llvm_state::f_ptr llvm_state::fetch(const std::string &name)
+{
+    auto sym = llvm::ExitOnError()(jitter.lookup(name + ".vecargs"));
+
+    return reinterpret_cast<double (*)(const double *)>(static_cast<std::uintptr_t>(sym.getAddress()));
+}
+
+void *llvm_state::fetch_vararg(const std::string &name)
 {
     auto sym = llvm::ExitOnError()(jitter.lookup(name));
 
-    return static_cast<std::uintptr_t>(sym.getAddress());
+    return reinterpret_cast<void *>(static_cast<std::uintptr_t>(sym.getAddress()));
 }
 
 } // namespace lambdifier

@@ -14,12 +14,11 @@ int main()
     // Init the LLVM machinery.
     lambdifier::llvm_state s{"my llvm module"};
 
-    // Build the expression 42 * (x + y).
+    // Build an expression.
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    s.add_expression("f", sin(c) * sin(c) + cos(c) * cos(c) + abs(x + y));
-    s.add_expression("g", "f"_func(x, y) + "f"_func(x, y));
+    s.add_expression("f", (sin(c) * sin(c) + cos(c) * cos(c) + abs(x + y)) / 23_num);
 
     std::cout << s.dump() << '\n';
 
@@ -27,9 +26,18 @@ int main()
     s.compile();
 
     // Fetch the compiled function.
-    auto func = reinterpret_cast<double (*)(double[])>(s.fetch("f.vecargs"));
+    auto func1 = s.fetch("f");
+    auto func2 = reinterpret_cast<double (*)(double, double)>(s.fetch_vararg("f"));
 
     // Invoke it.
-    double args[] = {1, 2};
-    std::cout << func(&args[0]) << '\n';
+    double args[] = {3.45, 6.78};
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+    std::cout << func1(args) << '\n';
+
+    std::cout << func2(args[0], args[1]) << '\n';
+    std::cout << func2(args[0], args[1]) << '\n';
+    std::cout << func2(args[0], args[1]) << '\n';
+    std::cout << func2(args[0], args[1]) << '\n';
 }
