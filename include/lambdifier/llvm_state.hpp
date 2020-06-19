@@ -25,6 +25,11 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unordered_map<std::string, llvm::Value *> named_values;
 
+    LAMBDIFIER_DLL_LOCAL void add_varargs_expression(const std::string &, const expression &, bool,
+                                                     const std::vector<std::string> &);
+    LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, const expression &, bool,
+                                                     const std::vector<std::string> &);
+
 public:
     explicit llvm_state(const std::string &);
 

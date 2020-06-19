@@ -12,6 +12,7 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
@@ -70,16 +71,9 @@ std::string llvm_state::dump() const
     return out;
 }
 
-void llvm_state::add_expression(const std::string &name, const expression &e, bool optimize)
+void llvm_state::add_varargs_expression(const std::string &name, const expression &e, bool optimize,
+                                        const std::vector<std::string> &vars)
 {
-    if (module->getNamedValue(name) != nullptr) {
-        throw std::invalid_argument("The name '" + name + "' already exists in the module");
-    }
-
-    // Fetch the number and names of the
-    // variables from the expression.
-    const auto vars = e.get_variables();
-
     // Prepare the function prototype. First the function arguments.
     std::vector<llvm::Type *> fargs(vars.size(), llvm::Type::getDoubleTy(get_context()));
     // Then the return type.
@@ -90,7 +84,6 @@ void llvm_state::add_expression(const std::string &name, const expression &e, bo
     assert(f != nullptr);
     // NOTE: check this in the future.
     // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
-
     // Set names for all arguments.
     decltype(vars.size()) idx = 0;
     for (auto &arg : f->args()) {
@@ -137,6 +130,91 @@ void llvm_state::add_expression(const std::string &name, const expression &e, bo
         // Error reading body, remove function.
         f->eraseFromParent();
     }
+}
+
+void llvm_state::add_vecargs_expression(const std::string &name, const expression &e, bool optimize,
+                                        const std::vector<std::string> &vars)
+{
+    // Prepare the function prototype. The only argument is an array.
+    std::vector<llvm::Type *> fargs(1, llvm::ArrayType::get(llvm::Type::getDoubleTy(get_context()), vars.size()));
+    // Then the return type.
+    auto *ft = llvm::FunctionType::get(llvm::Type::getDoubleTy(get_context()), fargs, false);
+    assert(ft != nullptr);
+    // Now create the function.
+    auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name + ".vecargs", module.get());
+    assert(f != nullptr);
+    // NOTE: check this in the future.
+    // f->addFnAttr(llvm::Attribute::get(get_context(), "inline"));
+    // Set the name of the function argument.
+    const auto arg_rng = f->args();
+    assert(arg_rng.begin() != arg_rng.end() && arg_rng.begin() + 1 == arg_rng.end());
+    auto &vec_arg = *arg_rng.begin();
+    vec_arg.setName("arg.vector");
+
+    // Create a new basic block to start insertion into.
+    auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
+    assert(bb != nullptr);
+    builder->SetInsertPoint(bb);
+
+    // Clear the map containing the variable names.
+    named_values.clear();
+    for (decltype(vars.size()) i = 0; i < vars.size(); ++i) {
+        const auto &var = vars[i];
+
+        // auto allo = builder->CreateAlloca(llvm::Type::getDoubleTy(get_context()), nullptr, var);
+
+        // Store the corresponding value from
+        // the array argument into the local variable.
+        // builder->CreateStore(builder->CreateExtractValue(&vec_arg, i), allo);
+
+        // named_values[var] = static_cast<llvm::Value *>(allo);
+
+        named_values[var] = static_cast<llvm::Value *>(llvm::ExtractValueInst::Create(&vec_arg, i, var, bb));
+    }
+
+    if (auto *ret_val = e.codegen(*this)) {
+        // Finish off the function.
+        builder->CreateRet(ret_val);
+
+        // Validate the generated code, checking for consistency.
+        std::string err_report;
+        llvm::raw_string_ostream ostr(err_report);
+        if (llvm::verifyFunction(*f, &ostr)) {
+            // Remove function before throwing.
+            f->eraseFromParent();
+
+            throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
+        }
+
+        if (optimize) {
+            llvm::legacy::FunctionPassManager fpm(module.get());
+
+            fpm.add(llvm::createInstructionCombiningPass());
+            fpm.add(llvm::createReassociatePass());
+            fpm.add(llvm::createGVNPass());
+            fpm.add(llvm::createCFGSimplificationPass());
+            fpm.doInitialization();
+
+            fpm.run(*f);
+        }
+    } else {
+        // Error reading body, remove function.
+        f->eraseFromParent();
+    }
+}
+
+void llvm_state::add_expression(const std::string &name, const expression &e, bool optimize)
+{
+    if (module->getNamedValue(name) != nullptr) {
+        throw std::invalid_argument("The name '" + name + "' already exists in the module");
+    }
+
+    // Fetch the number and names of the
+    // variables from the expression.
+    const auto vars = e.get_variables();
+
+    add_varargs_expression(name, e, optimize, vars);
+    add_vecargs_expression(name, e, optimize, vars);
 }
 
 void llvm_state::compile()

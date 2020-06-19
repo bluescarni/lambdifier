@@ -27,8 +27,9 @@ int main()
     s.compile();
 
     // Fetch the compiled function.
-    auto func = reinterpret_cast<double (*)(double, double)>(s.fetch("g"));
+    auto func = reinterpret_cast<double (*)(double[])>(s.fetch("f.vecargs"));
 
     // Invoke it.
-    std::cout << func(1, 2) << '\n';
+    double args[] = {1, 2};
+    std::cout << func(&args[0]) << '\n';
 }
