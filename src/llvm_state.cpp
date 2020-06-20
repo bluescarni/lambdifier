@@ -271,18 +271,15 @@ void llvm_state::compile()
     jitter.add_module(std::move(module));
 }
 
-llvm_state::f_ptr llvm_state::fetch(const std::string &name)
-{
-    auto sym = llvm::ExitOnError()(jitter.lookup(name + ".vecargs"));
-
-    return reinterpret_cast<double (*)(const double *)>(static_cast<std::uintptr_t>(sym.getAddress()));
-}
-
-void *llvm_state::fetch_vararg(const std::string &name)
+std::uintptr_t llvm_state::jit_lookup(const std::string &name)
 {
     auto sym = llvm::ExitOnError()(jitter.lookup(name));
+    return static_cast<std::uintptr_t>(sym.getAddress());
+}
 
-    return reinterpret_cast<void *>(static_cast<std::uintptr_t>(sym.getAddress()));
+llvm_state::f_ptr llvm_state::fetch(const std::string &name)
+{
+    return reinterpret_cast<double (*)(const double *)>(jit_lookup(name + ".vecargs"));
 }
 
 } // namespace lambdifier

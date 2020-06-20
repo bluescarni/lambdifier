@@ -29,7 +29,7 @@ int main()
 
     // Fetch the compiled function.
     auto func1 = s.fetch("f");
-    auto func2 = reinterpret_cast<double (*)(double, double)>(s.fetch_vararg("f"));
+    auto func2 = s.fetch_vararg<2>("f");
 
     // Invoke it.
     double args[] = {3.45, 6.78};

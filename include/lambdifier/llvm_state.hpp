@@ -1,8 +1,11 @@
 #ifndef LAMBDIFIER_LLVM_STATE_HPP
 #define LAMBDIFIER_LLVM_STATE_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 #include <llvm/IR/Function.h>
@@ -32,6 +35,7 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, bool, const std::vector<std::string> &);
     LAMBDIFIER_DLL_LOCAL void verify_function(llvm::Function *);
     LAMBDIFIER_DLL_LOCAL void optimize_function(llvm::Function *);
+    std::uintptr_t jit_lookup(const std::string &);
 
 public:
     explicit llvm_state(const std::string &);
@@ -56,7 +60,28 @@ public:
 
     using f_ptr = double (*)(const double *);
     f_ptr fetch(const std::string &);
-    void *fetch_vararg(const std::string &);
+
+private:
+    template <std::size_t>
+    using always_double_t = double;
+
+    template <std::size_t... S>
+    static auto get_vararg_type_impl(std::index_sequence<S...>)
+    {
+        return static_cast<double (*)(always_double_t<S>...)>(nullptr);
+    }
+
+public:
+    template <std::size_t N>
+    using vararg_f_ptr = decltype(get_vararg_type_impl(std::make_index_sequence<N>{}));
+
+    template <std::size_t N>
+    vararg_f_ptr<N> fetch_vararg(const std::string &name)
+    {
+        // NOTE: possible improvement here is to ensure that N
+        // is consistent with the number of arguments in the function.
+        return reinterpret_cast<vararg_f_ptr<N>>(jit_lookup(name));
+    }
 };
 
 } // namespace lambdifier
