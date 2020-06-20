@@ -87,6 +87,26 @@ expression operator/(expression e1, expression e2)
     return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 
+expression &operator+=(expression &x, expression e)
+{
+    return x = std::move(x) + std::move(e);
+}
+
+expression &operator-=(expression &x, expression e)
+{
+    return x = std::move(x) - std::move(e);
+}
+
+expression &operator*=(expression &x, expression e)
+{
+    return x = std::move(x) * std::move(e);
+}
+
+expression &operator/=(expression &x, expression e)
+{
+    return x = std::move(x) / std::move(e);
+}
+
 expression operator+(expression e)
 {
     return e;

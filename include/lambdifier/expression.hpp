@@ -126,6 +126,11 @@ LAMBDIFIER_DLL_PUBLIC expression operator-(expression, expression);
 LAMBDIFIER_DLL_PUBLIC expression operator*(expression, expression);
 LAMBDIFIER_DLL_PUBLIC expression operator/(expression, expression);
 
+LAMBDIFIER_DLL_PUBLIC expression &operator+=(expression &, expression);
+LAMBDIFIER_DLL_PUBLIC expression &operator-=(expression &, expression);
+LAMBDIFIER_DLL_PUBLIC expression &operator*=(expression &, expression);
+LAMBDIFIER_DLL_PUBLIC expression &operator/=(expression &, expression);
+
 LAMBDIFIER_DLL_PUBLIC expression operator+(expression);
 LAMBDIFIER_DLL_PUBLIC expression operator-(expression);
 

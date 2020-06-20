@@ -19,6 +19,10 @@ int main()
     auto x = "x"_var, y = "y"_var;
 
     auto ex = atan2(cos(tan(x) + tan(x)), y) + atan2(cos(tan(x) + tan(x)), y);
+    for (int i = 0; i < 10; ++i) {
+        ex += ex;
+    }
+
     std::cout << ex << '\n';
     s.add_expression("f", ex);
 
