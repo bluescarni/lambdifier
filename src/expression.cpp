@@ -3,6 +3,8 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
+
 
 #include <llvm/IR/Value.h>
 
@@ -40,6 +42,12 @@ llvm::Value *expression::codegen(llvm_state &s) const
 std::string expression::to_string() const
 {
     return m_ptr->to_string();
+}
+
+double expression::operator()(std::unordered_map<std::string, double> &values) const
+{
+    auto names = get_variables();
+    return m_ptr->evaluate(values);
 }
 
 std::vector<std::string> expression::get_variables() const

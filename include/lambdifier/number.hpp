@@ -26,6 +26,7 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+    double evaluate(std::unordered_map<std::string, double> &) const;
 
     void set_value(double);
 };

@@ -1,4 +1,6 @@
 #include <string>
+#include <unordered_map>
+
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/IR/Constants.h>
@@ -31,6 +33,11 @@ llvm::Value *number::codegen(llvm_state &s) const
 std::string number::to_string() const
 {
     return std::to_string(value);
+}
+
+double number::evaluate(std::unordered_map<std::string, double> &) const
+{
+    return value;
 }
 
 void number::set_value(double x)

@@ -2,6 +2,7 @@
 #define LAMBDIFIER_EXPRESSION_HPP
 
 #include <cassert>
+#include <unordered_map>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -27,6 +28,7 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual std::unique_ptr<expr_inner_base> clone() const = 0;
     virtual llvm::Value *codegen(llvm_state &) const = 0;
     virtual std::string to_string() const = 0;
+    virtual double evaluate(std::unordered_map<std::string, double> &) const = 0;
 };
 
 template <typename T>
@@ -55,6 +57,11 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
     std::string to_string() const final
     {
         return m_value.to_string();
+    }
+
+    double evaluate(std::unordered_map<std::string, double> &values) const final
+    {
+        return m_value.evaluate(values);
     }
 };
 
@@ -88,6 +95,7 @@ public:
 
     expression(const expression &);
     expression(expression &&) noexcept;
+    double operator()(std::unordered_map<std::string, double> &) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;

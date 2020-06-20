@@ -135,6 +135,10 @@ int main()
     std::cout << "crossover" << "\n";
     std::cout << "ex1: " << ex1 << "\n";
     std::cout << "ex2: " << ex2 << "\n";
+    std::cout << "numbers:" << "\n";
+    std::unordered_map<std::string, double> values{{"x", 1.234}, {"y", 0.123}};
+    std::cout << "ex1: " << ex1(values) << "\n";
+    std::cout << "ex2: " << ex2(values) << "\n";
 
     // Init the LLVM machinery.
     // lambdifier::llvm_state s{"unoptimized"};

@@ -2,6 +2,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
+
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Intrinsics.h>
@@ -97,6 +99,32 @@ std::string function_call::to_string() const
     return retval;
 }
 
+double function_call::evaluate(std::unordered_map<std::string, double> &values) const
+{
+    if (name.compare("llvm.sin") == 0) {
+        return std::sin(args[0](values));
+    } else if (name.compare("llvm.cos") == 0) {
+        return std::cos(args[0](values));
+    } else if (name.compare("llvm.pow") == 0) {
+        return std::pow(args[0](values), args[1](values));
+    } else if (name.compare("llvm.exp") == 0) {
+        return std::exp(args[0](values));
+    } else if (name.compare("llvm.exp2") == 0) {
+        return std::exp2(args[0](values));
+    } else if (name.compare("llvm.log") == 0) {
+        return std::log(args[0](values));
+    } else if (name.compare("llvm.log2") == 0) {
+        return std::log2(args[0](values));
+    } else if (name.compare("llvm.log10") == 0) {
+        return std::log10(args[0](values));
+    } else if (name.compare("llvm.sqrt") == 0) {
+        return std::sqrt(args[0](values));
+    } else {
+        assert(name.compare("llvm.fabs"));
+        return std::fabs(args[0](values));
+    }
+}
+
 void function_call::set_name(std::string n)
 {
     name = std::move(n);
@@ -106,6 +134,7 @@ void function_call::set_args(std::vector<expression> v)
 {
     args = std::move(v);
 }
+
 
 namespace detail
 {

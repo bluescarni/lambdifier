@@ -2,6 +2,7 @@
 #define LAMBDIFIER_BINARY_OPERATOR_HPP
 
 #include <string>
+#include <unordered_map>
 
 #include <llvm/IR/Value.h>
 
@@ -32,6 +33,7 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+    double evaluate(std::unordered_map<std::string, double> &) const;
 };
 
 } // namespace lambdifier

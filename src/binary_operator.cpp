@@ -1,6 +1,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <llvm/IR/Value.h>
@@ -34,12 +35,12 @@ const expression &binary_operator::get_rhs() const
     return rhs;
 }
 
-expression &binary_operator::access_lhs() 
+expression &binary_operator::access_lhs()
 {
     return lhs;
 }
 
-expression &binary_operator::access_rhs() 
+expression &binary_operator::access_rhs()
 {
     return rhs;
 }
@@ -78,6 +79,21 @@ llvm::Value *binary_operator::codegen(llvm_state &s) const
 std::string binary_operator::to_string() const
 {
     return "(" + lhs.to_string() + " " + op + " " + rhs.to_string() + ")";
+}
+
+double binary_operator::evaluate(std::unordered_map<std::string, double> &values) const
+{
+    switch (op) {
+        case '+':
+            return lhs(values) + rhs(values);
+        case '-':
+            return lhs(values) - rhs(values);
+        case '*':
+            return lhs(values) * rhs(values);
+        default:
+            assert(op == '/');
+            return lhs(values) / rhs(values);
+    }
 }
 
 } // namespace lambdifier

@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <unordered_map>
+
 
 #include <llvm/IR/Value.h>
 
@@ -37,6 +39,11 @@ std::string variable::to_string() const
 {
     return name;
 }
+
+double variable::evaluate(std::unordered_map<std::string, double> &values) const {
+    return values[name];
+}
+
 
 void variable::set_name(std::string s)
 {
