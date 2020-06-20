@@ -18,7 +18,7 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    auto ex = cos(tan(x) + tan(x));
+    auto ex = atan2(cos(tan(x) + tan(x)), y) + atan2(cos(tan(x) + tan(x)), y);
     std::cout << ex << '\n';
     s.add_expression("f", ex);
 

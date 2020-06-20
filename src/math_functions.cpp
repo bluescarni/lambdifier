@@ -48,6 +48,59 @@ expression tan(expression e)
     return expression{std::move(fc)};
 }
 
+expression asin(expression e)
+{
+    std::vector<expression> args;
+    args.emplace_back(std::move(e));
+
+    function_call fc{"asin", std::move(args)};
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
+    fc.set_type(function_call::type::external);
+
+    return expression{std::move(fc)};
+}
+
+expression acos(expression e)
+{
+    std::vector<expression> args;
+    args.emplace_back(std::move(e));
+
+    function_call fc{"acos", std::move(args)};
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
+    fc.set_type(function_call::type::external);
+
+    return expression{std::move(fc)};
+}
+
+expression atan(expression e)
+{
+    std::vector<expression> args;
+    args.emplace_back(std::move(e));
+
+    function_call fc{"atan", std::move(args)};
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
+    fc.set_type(function_call::type::external);
+
+    return expression{std::move(fc)};
+}
+
+expression atan2(expression e1, expression e2)
+{
+    std::vector<expression> args;
+    args.emplace_back(std::move(e1));
+    args.emplace_back(std::move(e2));
+
+    function_call fc{"atan2", std::move(args)};
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
+    fc.set_type(function_call::type::external);
+
+    return expression{std::move(fc)};
+}
+
 expression pow(expression e1, expression e2)
 {
     std::vector<expression> args;
