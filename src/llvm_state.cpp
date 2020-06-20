@@ -43,7 +43,10 @@ llvm_state::llvm_state(const std::string &name)
     builder = std::make_unique<llvm::IRBuilder<>>(get_context());
     // Set a couple of flags for faster math at the
     // price of potential change of semantics.
-    // builder->setFastMathFlags(llvm::FastMathFlags::AllowReassoc | llvm::FastMathFlags::AllowReciprocal);
+    llvm::FastMathFlags fmf;
+    fmf.setAllowReciprocal();
+    fmf.setAllowReassoc();
+    builder->setFastMathFlags(fmf);
 
     // Create the function pass manager.
     fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
