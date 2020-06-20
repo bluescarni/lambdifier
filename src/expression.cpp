@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -67,19 +68,96 @@ std::vector<std::string> expression::get_variables() const
     return retval;
 }
 
+expression expression::diff(const std::string &s) const
+{
+    return m_ptr->diff(s);
+}
+
+bool expression::is_zero() const
+{
+    if (auto num_ptr = extract<number>()) {
+        return num_ptr->get_value() == 0.;
+    } else {
+        return false;
+    }
+}
+
+bool expression::is_one() const
+{
+    if (auto num_ptr = extract<number>()) {
+        return num_ptr->get_value() == 1.;
+    } else {
+        return false;
+    }
+}
+
+bool expression::is_finite_number() const
+{
+    if (auto num_ptr = extract<number>()) {
+        return std::isfinite(num_ptr->get_value());
+    } else {
+        return false;
+    }
+}
+
 expression operator+(expression e1, expression e2)
 {
-    return expression{binary_operator{'+', std::move(e1), std::move(e2)}};
+    const auto e1_zero = e1.is_zero(), e2_zero = e2.is_zero();
+    if (e1_zero) {
+        if (e2_zero) {
+            // 0 + 0 == 0.
+            return expression{number{0}};
+        } else {
+            // 0 + e2 == e2.
+            return e2;
+        }
+    } else {
+        if (e2_zero) {
+            // e1 + 0 == e1;
+            return e1;
+        } else {
+            // e1 + e2.
+            return expression{binary_operator{'+', std::move(e1), std::move(e2)}};
+        }
+    }
 }
 
 expression operator-(expression e1, expression e2)
 {
-    return expression{binary_operator{'-', std::move(e1), std::move(e2)}};
+    const auto e1_zero = e1.is_zero(), e2_zero = e2.is_zero();
+    if (e1_zero) {
+        if (e2_zero) {
+            // 0 - 0 == 0.
+            return expression{number{0}};
+        } else {
+            // 0 - e2 == -e2.
+            return -std::move(e2);
+        }
+    } else {
+        if (e2_zero) {
+            // e1 - 0 == e1;
+            return e1;
+        } else {
+            // e1 - e2.
+            return expression{binary_operator{'-', std::move(e1), std::move(e2)}};
+        }
+    }
 }
 
 expression operator*(expression e1, expression e2)
 {
-    return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
+    if ((e1.is_zero() && e2.is_finite_number()) || (e1.is_finite_number() && e2.is_zero())) {
+        // 0 * finite == finite * 0 == 0.
+        return expression{number{0}};
+    } else if (e1.is_one()) {
+        // 1 * e2 == e2.
+        return e2;
+    } else if (e2.is_one()) {
+        // e1 * 1 == e1.
+        return e1;
+    } else {
+        return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
+    }
 }
 
 expression operator/(expression e1, expression e2)

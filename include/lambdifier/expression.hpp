@@ -4,6 +4,7 @@
 #include <cassert>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -27,6 +28,7 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual std::unique_ptr<expr_inner_base> clone() const = 0;
     virtual llvm::Value *codegen(llvm_state &) const = 0;
     virtual std::string to_string() const = 0;
+    virtual expression diff(const std::string &) const = 0;
 };
 
 template <typename T>
@@ -56,6 +58,8 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
     {
         return m_value.to_string();
     }
+
+    expression diff(const std::string &) const final;
 };
 
 } // namespace detail
@@ -98,6 +102,12 @@ public:
 
     std::string to_string() const;
 
+    expression diff(const std::string &) const;
+
+    bool is_zero() const;
+    bool is_one() const;
+    bool is_finite_number() const;
+
 private:
     detail::expr_inner_base const *ptr() const
     {
@@ -135,6 +145,31 @@ LAMBDIFIER_DLL_PUBLIC expression operator+(expression);
 LAMBDIFIER_DLL_PUBLIC expression operator-(expression);
 
 LAMBDIFIER_DLL_PUBLIC std::ostream &operator<<(std::ostream &, const expression &);
+
+namespace detail
+{
+
+template <typename T>
+concept differentiable_expr = requires(const T &e, const std::string &s)
+{
+    {
+        e.diff(s)
+    }
+    ->same_as<expression>;
+};
+
+template <typename T>
+inline expression expr_inner<T>::diff(const std::string &s) const
+{
+    if constexpr (differentiable_expr<T>) {
+        return m_value.diff(s);
+    } else {
+        // TODO.
+        throw std::runtime_error("diff() not implemented");
+    }
+}
+
+} // namespace detail
 
 } // namespace lambdifier
 
