@@ -18,7 +18,13 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    s.add_expression("f", (sin(c) * sin(c) + cos(c) * cos(c) + abs(x + y)) / 23_num);
+    auto ex = atan2(cos(tan(x) + tan(x)), y) + atan2(cos(tan(x) + tan(x)), y);
+    for (int i = 0; i < 10; ++i) {
+        ex += ex;
+    }
+
+    std::cout << ex << '\n';
+    s.add_expression("f", ex);
 
     std::cout << s.dump() << '\n';
 
@@ -27,7 +33,7 @@ int main()
 
     // Fetch the compiled function.
     auto func1 = s.fetch("f");
-    auto func2 = reinterpret_cast<double (*)(double, double)>(s.fetch_vararg("f"));
+    auto func2 = s.fetch_vararg<2>("f");
 
     // Invoke it.
     double args[] = {3.45, 6.78};

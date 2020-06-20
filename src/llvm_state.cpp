@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -26,6 +27,7 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
+#include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
 
@@ -42,7 +44,10 @@ llvm_state::llvm_state(const std::string &name)
     builder = std::make_unique<llvm::IRBuilder<>>(get_context());
     // Set a couple of flags for faster math at the
     // price of potential change of semantics.
-    // builder->setFastMathFlags(llvm::FastMathFlags::AllowReassoc | llvm::FastMathFlags::AllowReciprocal);
+    llvm::FastMathFlags fmf;
+    fmf.setAllowReciprocal();
+    fmf.setAllowReassoc();
+    builder->setFastMathFlags(fmf);
 
     // Create the function pass manager.
     fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
@@ -163,13 +168,13 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name + ".vecargs", module.get());
     assert(f != nullptr);
-    // Check about this.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "readonly"));
     // Set the name of the function argument.
     const auto arg_rng = f->args();
     assert(arg_rng.begin() != arg_rng.end() && arg_rng.begin() + 1 == arg_rng.end());
     auto &vec_arg = *arg_rng.begin();
     vec_arg.setName("arg.vector");
+    // Specify that this is a read-only pointer argument.
+    vec_arg.addAttr(llvm::Attribute::ReadOnly);
 
     // Create a new basic block to start insertion into.
     auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
@@ -247,6 +252,8 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
 
 void llvm_state::add_expression(const std::string &name, const expression &e, bool optimize)
 {
+    detail::check_symbol_name(name);
+
     if (module->getNamedValue(name) != nullptr) {
         throw std::invalid_argument("The name '" + name + "' already exists in the module");
     }
@@ -264,18 +271,15 @@ void llvm_state::compile()
     jitter.add_module(std::move(module));
 }
 
-llvm_state::f_ptr llvm_state::fetch(const std::string &name)
-{
-    auto sym = llvm::ExitOnError()(jitter.lookup(name + ".vecargs"));
-
-    return reinterpret_cast<double (*)(const double *)>(static_cast<std::uintptr_t>(sym.getAddress()));
-}
-
-void *llvm_state::fetch_vararg(const std::string &name)
+std::uintptr_t llvm_state::jit_lookup(const std::string &name)
 {
     auto sym = llvm::ExitOnError()(jitter.lookup(name));
+    return static_cast<std::uintptr_t>(sym.getAddress());
+}
 
-    return reinterpret_cast<void *>(static_cast<std::uintptr_t>(sym.getAddress()));
+llvm_state::f_ptr llvm_state::fetch(const std::string &name)
+{
+    return reinterpret_cast<double (*)(const double *)>(jit_lookup(name + ".vecargs"));
 }
 
 } // namespace lambdifier

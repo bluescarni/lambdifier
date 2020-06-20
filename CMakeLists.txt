@@ -113,6 +113,7 @@ set(LAMBDIFIER_SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/function_call.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/math_functions.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/jit.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/check_symbol_name.cpp"
 )
 
 # Setup of the lambdifier shared library.
@@ -148,8 +149,7 @@ set_target_properties(lambdifier::llvm_headers PROPERTIES INTERFACE_INCLUDE_DIRE
 if(${LLVM_VERSION_MAJOR} EQUAL 10)
   target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers LLVM)
 else()
-  llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts orcjit executionengine x86codegen x86info x86desc x86asmparser)
-  llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS orcjit)
+  llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts orcjit executionengine x86codegen x86info x86desc x86asmparser transformutils)
   target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers ${LAMBDIFIER_LLVM_LIBS})
 endif()
 

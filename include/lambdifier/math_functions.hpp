@@ -9,6 +9,11 @@ namespace lambdifier
 
 LAMBDIFIER_DLL_PUBLIC expression sin(expression);
 LAMBDIFIER_DLL_PUBLIC expression cos(expression);
+LAMBDIFIER_DLL_PUBLIC expression tan(expression);
+LAMBDIFIER_DLL_PUBLIC expression asin(expression);
+LAMBDIFIER_DLL_PUBLIC expression acos(expression);
+LAMBDIFIER_DLL_PUBLIC expression atan(expression);
+LAMBDIFIER_DLL_PUBLIC expression atan2(expression, expression);
 
 LAMBDIFIER_DLL_PUBLIC expression pow(expression, expression);
 

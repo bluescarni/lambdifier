@@ -13,7 +13,8 @@
 namespace lambdifier
 {
 
-binary_operator::binary_operator(char op, const expression &lhs, const expression &rhs) : op(op), lhs(lhs), rhs(rhs)
+binary_operator::binary_operator(char op, expression lhs, expression rhs)
+    : op(op), lhs(std::move(lhs)), rhs(std::move(rhs))
 {
     if (op != '+' && op != '-' && op != '*' && op != '/') {
         throw std::invalid_argument("Invalid binary operator: " + std::string(1, op));
