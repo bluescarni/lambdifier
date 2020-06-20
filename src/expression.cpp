@@ -102,62 +102,62 @@ bool expression::is_finite_number() const
 
 expression operator+(expression e1, expression e2)
 {
-    const auto e1_zero = e1.is_zero(), e2_zero = e2.is_zero();
-    if (e1_zero) {
-        if (e2_zero) {
-            // 0 + 0 == 0.
-            return expression{number{0}};
-        } else {
-            // 0 + e2 == e2.
-            return e2;
-        }
+    if (auto e1_nptr = e1.extract<number>(), e2_nptr = e2.extract<number>(); e1_nptr && e2_nptr) {
+        // Both are numbers, sum them.
+        return expression{number{e1_nptr->get_value() + e2_nptr->get_value()}};
+    } else if (e1_nptr && e1_nptr->get_value() == 0) {
+        // e1 zero, e2 smybolic.
+        return e2;
+    } else if (e2_nptr && e2_nptr->get_value() == 0) {
+        // e2 zero, e1 smybolic.
+        return e1;
     } else {
-        if (e2_zero) {
-            // e1 + 0 == e1;
-            return e1;
-        } else {
-            // e1 + e2.
-            return expression{binary_operator{'+', std::move(e1), std::move(e2)}};
-        }
+        // The standard case.
+        return expression{binary_operator{'+', std::move(e1), std::move(e2)}};
     }
 }
 
 expression operator-(expression e1, expression e2)
 {
-    const auto e1_zero = e1.is_zero(), e2_zero = e2.is_zero();
-    if (e1_zero) {
-        if (e2_zero) {
-            // 0 - 0 == 0.
-            return expression{number{0}};
-        } else {
-            // 0 - e2 == -e2.
-            return -std::move(e2);
-        }
+    if (auto e1_nptr = e1.extract<number>(), e2_nptr = e2.extract<number>(); e1_nptr && e2_nptr) {
+        // Both are numbers, subtract them.
+        return expression{number{e1_nptr->get_value() - e2_nptr->get_value()}};
+    } else if (e1_nptr && e1_nptr->get_value() == 0) {
+        // e1 zero, e2 smybolic.
+        return -std::move(e2);
+    } else if (e2_nptr && e2_nptr->get_value() == 0) {
+        // e2 zero, e1 smybolic.
+        return e1;
     } else {
-        if (e2_zero) {
-            // e1 - 0 == e1;
-            return e1;
-        } else {
-            // e1 - e2.
-            return expression{binary_operator{'-', std::move(e1), std::move(e2)}};
-        }
+        // The standard case.
+        return expression{binary_operator{'-', std::move(e1), std::move(e2)}};
     }
 }
 
 expression operator*(expression e1, expression e2)
 {
-    if ((e1.is_zero() && e2.is_finite_number()) || (e1.is_finite_number() && e2.is_zero())) {
-        // 0 * finite == finite * 0 == 0.
-        return expression{number{0}};
-    } else if (e1.is_one()) {
-        // 1 * e2 == e2.
-        return e2;
-    } else if (e2.is_one()) {
-        // e1 * 1 == e1.
-        return e1;
-    } else {
-        return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
+    if (auto e1_nptr = e1.extract<number>(), e2_nptr = e2.extract<number>(); e1_nptr && e2_nptr) {
+        // Both are numbers, multiply them.
+        return expression{number{e1_nptr->get_value() * e2_nptr->get_value()}};
+    } else if (e1_nptr) {
+        if (e1_nptr->get_value() == 0) {
+            // 0 * symbolic = 0.
+            return expression{number{0}};
+        } else if (e1_nptr->get_value() == 1) {
+            // 1 * symbolic = symbolic.
+            return e2;
+        }
+    } else if (e2_nptr) {
+        if (e2_nptr->get_value() == 0) {
+            // symbolic * 0 = 0.
+            return expression{number{0}};
+        } else if (e2_nptr->get_value() == 1) {
+            // symbolic * 1 = symbolic.
+            return e1;
+        }
     }
+    // The standard case.
+    return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
 }
 
 expression operator/(expression e1, expression e2)
