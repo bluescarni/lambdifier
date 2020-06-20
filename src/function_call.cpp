@@ -88,6 +88,12 @@ llvm::Value *function_call::codegen(llvm_state &s) const
         if (!callee_f) {
             throw std::invalid_argument("Unknown internal function referenced: '" + name + "'");
         }
+
+        if (callee_f->empty()) {
+            // An internal function cannot be empty (i.e., we need declaration
+            // and definition).
+            throw std::invalid_argument("The internal function '" + name + "' is empty");
+        }
     } else if (ty == type::external) {
         // Look up the name in the global module table.
         callee_f = s.get_module().getFunction(name);
@@ -124,6 +130,11 @@ llvm::Value *function_call::codegen(llvm_state &s) const
 
         if (!callee_f) {
             throw std::invalid_argument("Error getting the declaration of the intrinsic '" + name + "'");
+        }
+
+        if (!callee_f->empty()) {
+            // It does not make sense to have a definition of a builtin.
+            throw std::invalid_argument("The intrinsic '" + name + "' must be an empty function");
         }
     }
 

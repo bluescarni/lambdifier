@@ -18,7 +18,9 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    s.add_expression("f", pow(cos(x), cos(y)));
+    auto ex = pow(cos(x), cos(y));
+    std::cout << ex << '\n';
+    s.add_expression("f", ex);
 
     std::cout << s.dump() << '\n';
 

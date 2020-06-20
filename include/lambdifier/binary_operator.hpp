@@ -18,11 +18,12 @@ class LAMBDIFIER_DLL_PUBLIC binary_operator
     expression lhs, rhs;
 
 public:
-    explicit binary_operator(char, const expression &, const expression &);
+    explicit binary_operator(char, expression, expression);
     binary_operator(const binary_operator &);
     binary_operator(binary_operator &&) noexcept;
     ~binary_operator();
 
+    // Getters/setters.
     const expression &get_lhs() const;
     const expression &get_rhs() const;
     void set_lhs(expression);
