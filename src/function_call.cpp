@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Type.h>
@@ -41,6 +42,11 @@ const std::vector<expression> &function_call::get_args() const
     return args;
 }
 
+const std::vector<llvm::Attribute::AttrKind> &function_call::get_attributes() const
+{
+    return attributes;
+}
+
 function_call::type function_call::get_type() const
 {
     return ty;
@@ -60,6 +66,11 @@ void function_call::set_display_name(std::string s)
 void function_call::set_args(std::vector<expression> a)
 {
     args = std::move(a);
+}
+
+void function_call::set_attributes(std::vector<llvm::Attribute::AttrKind> att)
+{
+    attributes = std::move(att);
 }
 
 void function_call::set_type(type t)
@@ -112,6 +123,16 @@ llvm::Value *function_call::codegen(llvm_state &s) const
             std::vector<llvm::Type *> doubles(args.size(), s.get_builder().getDoubleTy());
             auto *ft = llvm::FunctionType::get(s.get_builder().getDoubleTy(), doubles, false);
             callee_f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, &s.get_module());
+
+            if (!callee_f) {
+                throw std::invalid_argument("The creation of the prototype of the external function '" + name
+                                            + "' failed");
+            }
+
+            // Add the function attributes.
+            for (const auto &att : attributes) {
+                callee_f->addFnAttr(att);
+            }
         }
     } else {
         // Builtin.
@@ -171,22 +192,5 @@ std::string function_call::to_string() const
 
     return retval;
 }
-
-namespace detail
-{
-
-function_caller::function_caller(const std::string &name) : name(name) {}
-
-} // namespace detail
-
-inline namespace literals
-{
-
-detail::function_caller operator""_func(const char *str, std::size_t size)
-{
-    return detail::function_caller{std::string{str, size}};
-}
-
-} // namespace literals
 
 } // namespace lambdifier

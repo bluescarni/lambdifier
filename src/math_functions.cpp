@@ -1,5 +1,8 @@
+#include <initializer_list>
 #include <utility>
 #include <vector>
+
+#include <llvm/IR/Attributes.h>
 
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
@@ -32,6 +35,19 @@ expression cos(expression e)
     return expression{std::move(fc)};
 }
 
+expression tan(expression e)
+{
+    std::vector<expression> args;
+    args.emplace_back(std::move(e));
+
+    function_call fc{"tan", std::move(args)};
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
+    fc.set_type(function_call::type::external);
+
+    return expression{std::move(fc)};
+}
+
 expression pow(expression e1, expression e2)
 {
     std::vector<expression> args;
@@ -39,7 +55,8 @@ expression pow(expression e1, expression e2)
     args.emplace_back(std::move(e2));
 
     function_call fc{"pow", std::move(args)};
-    fc.set_display_name("pow");
+    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
+                       llvm::Attribute::WillReturn});
     fc.set_type(function_call::type::external);
 
     return expression{std::move(fc)};

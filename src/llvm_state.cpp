@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -167,13 +168,13 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
     // Now create the function.
     auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name + ".vecargs", module.get());
     assert(f != nullptr);
-    // Check about this.
-    // f->addFnAttr(llvm::Attribute::get(get_context(), "readonly"));
     // Set the name of the function argument.
     const auto arg_rng = f->args();
     assert(arg_rng.begin() != arg_rng.end() && arg_rng.begin() + 1 == arg_rng.end());
     auto &vec_arg = *arg_rng.begin();
     vec_arg.setName("arg.vector");
+    // Specify that this is a read-only pointer argument.
+    vec_arg.addAttr(llvm::Attribute::ReadOnly);
 
     // Create a new basic block to start insertion into.
     auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
