@@ -18,7 +18,7 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    s.add_expression("f", (sin(c) * sin(c) + cos(c) * cos(c) + abs(x + y)) / 23_num);
+    s.add_expression("f", pow(cos(x), cos(y)));
 
     std::cout << s.dump() << '\n';
 

@@ -16,23 +16,35 @@ namespace lambdifier
 
 class LAMBDIFIER_DLL_PUBLIC function_call
 {
-    std::string name;
+public:
+    enum class type { internal, external, builtin };
+
+private:
+    std::string name, display_name;
     std::vector<expression> args;
+    type ty = type::internal;
 
 public:
-    explicit function_call(const std::string &, std::vector<expression>);
+    explicit function_call(std::string, std::vector<expression>);
     function_call(const function_call &);
     function_call(function_call &&) noexcept;
     ~function_call();
 
+    // Getters.
     const std::string &get_name() const;
+    const std::string &get_display_name() const;
     const std::vector<expression> &get_args() const;
+    type get_type() const;
 
+    // Setters.
+    void set_name(std::string);
+    void set_display_name(std::string);
+    void set_args(std::vector<expression>);
+    void set_type(type);
+
+    // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
-
-    void set_name(std::string);
-    void set_args(std::vector<expression>);
 };
 
 namespace detail

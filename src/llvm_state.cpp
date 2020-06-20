@@ -26,6 +26,7 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
+#include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
 
@@ -247,6 +248,8 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
 
 void llvm_state::add_expression(const std::string &name, const expression &e, bool optimize)
 {
+    detail::check_symbol_name(name);
+
     if (module->getNamedValue(name) != nullptr) {
         throw std::invalid_argument("The name '" + name + "' already exists in the module");
     }

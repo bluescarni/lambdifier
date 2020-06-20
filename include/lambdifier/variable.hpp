@@ -18,7 +18,7 @@ class LAMBDIFIER_DLL_PUBLIC variable
     std::string name;
 
 public:
-    explicit variable(const std::string &);
+    explicit variable(std::string);
     variable(const variable &);
     variable(variable &&) noexcept;
     ~variable();

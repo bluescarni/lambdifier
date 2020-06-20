@@ -8,6 +8,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 
+#include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -15,18 +16,24 @@
 namespace lambdifier
 {
 
-function_call::function_call(const std::string &name, std::vector<expression> args) : name(name), args(std::move(args))
+function_call::function_call(std::string s, std::vector<expression> args)
+    : name(std::move(s)), display_name(name), args(std::move(args))
 {
 }
 
 function_call::function_call(const function_call &) = default;
 function_call::function_call(function_call &&) noexcept = default;
-
 function_call::~function_call() = default;
 
+// Getters.
 const std::string &function_call::get_name() const
 {
     return name;
+}
+
+const std::string &function_call::get_display_name() const
+{
+    return display_name;
 }
 
 const std::vector<expression> &function_call::get_args() const
@@ -34,38 +41,100 @@ const std::vector<expression> &function_call::get_args() const
     return args;
 }
 
+function_call::type function_call::get_type() const
+{
+    return ty;
+}
+
+// Setters.
+void function_call::set_name(std::string s)
+{
+    name = std::move(s);
+}
+
+void function_call::set_display_name(std::string s)
+{
+    display_name = std::move(s);
+}
+
+void function_call::set_args(std::vector<expression> a)
+{
+    args = std::move(a);
+}
+
+void function_call::set_type(type t)
+{
+    switch (t) {
+        case type::internal:
+            [[fallthrough]];
+        case type::external:
+            [[fallthrough]];
+        case type::builtin:
+            ty = t;
+            break;
+        default:
+            throw std::invalid_argument("Invalid funciton type selected: " + std::to_string(static_cast<int>(t)));
+    }
+}
+
 llvm::Value *function_call::codegen(llvm_state &s) const
 {
     llvm::Function *callee_f;
 
-    if (auto intrinsic_ID = llvm::Function::lookupIntrinsicID(name)) {
+    if (ty == type::internal) {
+        // Look up the name in the global module table.
+        callee_f = s.get_module().getFunction(name);
+
+        if (!callee_f) {
+            throw std::invalid_argument("Unknown internal function referenced: '" + name + "'");
+        }
+    } else if (ty == type::external) {
+        // Look up the name in the global module table.
+        callee_f = s.get_module().getFunction(name);
+
+        if (callee_f) {
+            // The function declaration exists already. Check that it is only a
+            // declaration and not a definition.
+            if (!callee_f->empty()) {
+                throw std::invalid_argument(
+                    "Cannot call the function '" + name
+                    + "' as an external function, because it is defined as an internal module function");
+            }
+        } else {
+            // The function does not exist yet, make the prototype.
+            detail::check_symbol_name(name);
+            std::vector<llvm::Type *> doubles(args.size(), s.get_builder().getDoubleTy());
+            auto *ft = llvm::FunctionType::get(s.get_builder().getDoubleTy(), doubles, false);
+            callee_f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, &s.get_module());
+        }
+    } else {
+        // Builtin.
+        const auto intrinsic_ID = llvm::Function::lookupIntrinsicID(name);
+        if (!intrinsic_ID) {
+            throw std::invalid_argument("Cannot fetch the ID of the intrinsic '" + name + "'");
+        }
+
         // NOTE: for generic intrinsics to work, we need to specify
         // the desired argument types. See:
         // https://stackoverflow.com/questions/11985247/llvm-insert-intrinsic-function-cos
         // And the docs of the getDeclaration() function.
         const std::vector<llvm::Type *> doubles(args.size(), s.get_builder().getDoubleTy());
 
-        // Intrinsic function.
         callee_f = llvm::Intrinsic::getDeclaration(&s.get_module(), intrinsic_ID, doubles);
 
         if (!callee_f) {
             throw std::invalid_argument("Error getting the declaration of the intrinsic '" + name + "'");
         }
-    } else {
-        // Look up the name in the global module table.
-        callee_f = s.get_module().getFunction(name);
-
-        if (!callee_f) {
-            throw std::invalid_argument("Unknown function referenced: " + name);
-        }
     }
 
-    // If argument mismatch error.
+    // Check the number of arguments.
     if (callee_f->arg_size() != args.size()) {
-        throw std::invalid_argument("Incorrect # arguments passed: " + std::to_string(callee_f->arg_size())
-                                    + " are expected, but " + std::to_string(args.size()) + " were provided instead");
+        throw std::invalid_argument("Incorrect # of arguments passed in a function call: "
+                                    + std::to_string(callee_f->arg_size()) + " are expected, but "
+                                    + std::to_string(args.size()) + " were provided instead");
     }
 
+    // Create the function arguments.
     std::vector<llvm::Value *> args_v;
     for (decltype(args.size()) i = 0, e = args.size(); i != e; ++i) {
         args_v.push_back(args[i].codegen(s));
@@ -79,7 +148,7 @@ llvm::Value *function_call::codegen(llvm_state &s) const
 
 std::string function_call::to_string() const
 {
-    auto retval = name;
+    auto retval = display_name;
     retval += "(";
     for (decltype(args.size()) i = 0; i < args.size(); ++i) {
         retval += args[i].to_string();
@@ -90,16 +159,6 @@ std::string function_call::to_string() const
     retval += ")";
 
     return retval;
-}
-
-void function_call::set_name(std::string n)
-{
-    name = std::move(n);
-}
-
-void function_call::set_args(std::vector<expression> v)
-{
-    args = std::move(v);
 }
 
 namespace detail
