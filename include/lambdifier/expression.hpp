@@ -121,13 +121,13 @@ public:
     std::vector<std::string> get_variables() const;
 };
 
-LAMBDIFIER_DLL_PUBLIC expression operator+(const expression &, const expression &);
-LAMBDIFIER_DLL_PUBLIC expression operator-(const expression &, const expression &);
-LAMBDIFIER_DLL_PUBLIC expression operator*(const expression &, const expression &);
-LAMBDIFIER_DLL_PUBLIC expression operator/(const expression &, const expression &);
+LAMBDIFIER_DLL_PUBLIC expression operator+(expression, expression);
+LAMBDIFIER_DLL_PUBLIC expression operator-(expression, expression);
+LAMBDIFIER_DLL_PUBLIC expression operator*(expression, expression);
+LAMBDIFIER_DLL_PUBLIC expression operator/(expression, expression);
 
-LAMBDIFIER_DLL_PUBLIC expression operator+(const expression &);
-LAMBDIFIER_DLL_PUBLIC expression operator-(const expression &);
+LAMBDIFIER_DLL_PUBLIC expression operator+(expression);
+LAMBDIFIER_DLL_PUBLIC expression operator-(expression);
 
 LAMBDIFIER_DLL_PUBLIC std::ostream &operator<<(std::ostream &, const expression &);
 

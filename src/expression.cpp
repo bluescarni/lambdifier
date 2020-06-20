@@ -1,7 +1,7 @@
 #include <algorithm>
-
 #include <ostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <llvm/IR/Value.h>
@@ -67,34 +67,34 @@ std::vector<std::string> expression::get_variables() const
     return retval;
 }
 
-expression operator+(const expression &e1, const expression &e2)
+expression operator+(expression e1, expression e2)
 {
-    return expression{binary_operator{'+', e1, e2}};
+    return expression{binary_operator{'+', std::move(e1), std::move(e2)}};
 }
 
-expression operator-(const expression &e1, const expression &e2)
+expression operator-(expression e1, expression e2)
 {
-    return expression{binary_operator{'-', e1, e2}};
+    return expression{binary_operator{'-', std::move(e1), std::move(e2)}};
 }
 
-expression operator*(const expression &e1, const expression &e2)
+expression operator*(expression e1, expression e2)
 {
-    return expression{binary_operator{'*', e1, e2}};
+    return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
 }
 
-expression operator/(const expression &e1, const expression &e2)
+expression operator/(expression e1, expression e2)
 {
-    return expression{binary_operator{'/', e1, e2}};
+    return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 
-expression operator+(const expression &e)
+expression operator+(expression e)
 {
     return e;
 }
 
-expression operator-(const expression &e)
+expression operator-(expression e)
 {
-    return expression{number{-1}} * e;
+    return expression{number{-1}} * std::move(e);
 }
 
 std::ostream &operator<<(std::ostream &os, const expression &e)
