@@ -210,26 +210,26 @@ std::string function_call::to_string() const
 
 double function_call::evaluate(std::unordered_map<std::string, double> &values) const
 {
-    if (name.compare("llvm.sin") == 0) {
+    if (display_name.compare("sin") == 0) {
         return std::sin(args[0](values));
-    } else if (name.compare("llvm.cos") == 0) {
+    } else if (display_name.compare("cos") == 0) {
         return std::cos(args[0](values));
-    } else if (name.compare("llvm.pow") == 0) {
+    } else if (display_name.compare("pow") == 0) {
         return std::pow(args[0](values), args[1](values));
-    } else if (name.compare("llvm.exp") == 0) {
+    } else if (display_name.compare("exp") == 0) {
         return std::exp(args[0](values));
-    } else if (name.compare("llvm.exp2") == 0) {
+    } else if (display_name.compare("exp2") == 0) {
         return std::exp2(args[0](values));
-    } else if (name.compare("llvm.log") == 0) {
+    } else if (display_name.compare("log") == 0) {
         return std::log(args[0](values));
-    } else if (name.compare("llvm.log2") == 0) {
+    } else if (display_name.compare("log2") == 0) {
         return std::log2(args[0](values));
-    } else if (name.compare("llvm.log10") == 0) {
+    } else if (display_name.compare("log10") == 0) {
         return std::log10(args[0](values));
-    } else if (name.compare("llvm.sqrt") == 0) {
+    } else if (display_name.compare("sqrt") == 0) {
         return std::sqrt(args[0](values));
     } else {
-        assert(name.compare("llvm.fabs"));
+        assert(display_name.compare("abs"));
         return std::fabs(args[0](values));
     }
 }

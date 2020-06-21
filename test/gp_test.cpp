@@ -38,11 +38,11 @@ lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth,
     if (depth < min_depth) {
         // We get a kernel
         // probability to get any function or a bo is equal
-        type = (rng01(gen) < allowed_func.size() / (allowed_func.size() + allowed_bo.size())) ? 2 : 3;
+        type = (rng01(gen) < allowed_func.size() / (allowed_func.size() + allowed_bo.size())) ? kernel_types::unary_t : kernel_types::binary_t;
     } else if (depth >= max_depth) {
         // We get a terminal
         // probability to get a terminal with an input variable or a constant is equal
-        type = (rng01(gen) < allowed_numbers.size() / (allowed_numbers.size() + allowed_variables.size())) ? 0 : 1;
+        type = (rng01(gen) < allowed_numbers.size() / (allowed_numbers.size() + allowed_variables.size())) ? kernel_types::number_t : kernel_types::variable_t;
     } else {
         // We get whatever
         type = random_all(gen);
