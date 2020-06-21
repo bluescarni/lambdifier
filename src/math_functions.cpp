@@ -19,8 +19,15 @@ expression sin(expression e)
     function_call fc{"llvm.sin", std::move(args)};
     fc.set_display_name("sin");
     fc.set_type(function_call::type::builtin);
-    fc.set_diff_f(
-        [](const function_call &c, const std::string &s) { return cos(c.get_args()[0]) * c.get_args()[0].diff(s); });
+    fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when taking the derivative of the sine (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return cos(args[0]) * args[0].diff(s);
+    });
 
     return expression{std::move(fc)};
 }
@@ -33,8 +40,15 @@ expression cos(expression e)
     function_call fc{"llvm.cos", std::move(args)};
     fc.set_display_name("cos");
     fc.set_type(function_call::type::builtin);
-    fc.set_diff_f(
-        [](const function_call &c, const std::string &s) { return -sin(c.get_args()[0]) * c.get_args()[0].diff(s); });
+    fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument("Inconsistent number of arguments when taking the derivative of the cosine (1 "
+                                        "argument was expected, but "
+                                        + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return -sin(args[0]) * args[0].diff(s);
+    });
 
     return expression{std::move(fc)};
 }
