@@ -236,7 +236,7 @@ double function_call::evaluate(std::unordered_map<std::string, double> &values) 
 expression function_call::diff(const std::string &s) const
 {
     if (diff_f) {
-        return diff_f(*this, s);
+        return diff_f(args, s);
     } else {
         // TODO
         throw std::runtime_error("No diff implemented for this function call");

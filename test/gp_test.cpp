@@ -19,7 +19,8 @@ static std::uniform_real_distribution<double> rng01(0., 1.);
 enum kernel_types { number_t, variable_t, unary_t, binary_t };
 
 static std::vector<char> allowed_bo = {'+', '-', '*', '/'};
-static std::vector<std::string> allowed_func = {"llvm.exp", "llvm.sin"};
+static std::vector<expression (*)(expression)> allowed_func
+    = {lambdifier::exp, lambdifier::sin, lambdifier::cos, lambdifier::log};
 static std::vector<double> allowed_numbers = {3.14, -2.34};
 static std::vector<std::string> allowed_variables = {"x", "y"};
 
@@ -59,7 +60,7 @@ lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth,
         }
         case kernel_types::unary_t: {
             auto value = *random_element(allowed_func.begin(), allowed_func.end(), gen);
-            return expression{function_call(value, std::vector{random_expression(min_depth, max_depth, depth + 1)})};
+            return value(random_expression(min_depth, max_depth, depth + 1));
             break;
         }
         case kernel_types::binary_t: {
