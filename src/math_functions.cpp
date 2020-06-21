@@ -19,6 +19,8 @@ expression sin(expression e)
     function_call fc{"llvm.sin", std::move(args)};
     fc.set_display_name("sin");
     fc.set_type(function_call::type::builtin);
+    fc.set_diff_f(
+        [](const function_call &c, const std::string &s) { return cos(c.get_args()[0]) * c.get_args()[0].diff(s); });
 
     return expression{std::move(fc)};
 }
@@ -31,6 +33,8 @@ expression cos(expression e)
     function_call fc{"llvm.cos", std::move(args)};
     fc.set_display_name("cos");
     fc.set_type(function_call::type::builtin);
+    fc.set_diff_f(
+        [](const function_call &c, const std::string &s) { return -sin(c.get_args()[0]) * c.get_args()[0].diff(s); });
 
     return expression{std::move(fc)};
 }

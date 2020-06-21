@@ -57,6 +57,11 @@ function_call::type function_call::get_type() const
     return ty;
 }
 
+function_call::diff_t function_call::get_diff_f() const
+{
+    return diff_f;
+}
+
 // Setters.
 void function_call::set_name(std::string s)
 {
@@ -91,6 +96,11 @@ void function_call::set_type(type t)
         default:
             throw std::invalid_argument("Invalid funciton type selected: " + std::to_string(static_cast<int>(t)));
     }
+}
+
+void function_call::set_diff_f(diff_t f)
+{
+    diff_f = std::move(f);
 }
 
 llvm::Value *function_call::codegen(llvm_state &s) const
@@ -223,4 +233,14 @@ double function_call::evaluate(std::unordered_map<std::string, double> &values) 
         return std::fabs(args[0](values));
     }
 }
+expression function_call::diff(const std::string &s) const
+{
+    if (diff_f) {
+        return diff_f(*this, s);
+    } else {
+        // TODO
+        throw std::runtime_error("No diff implemented for this function call");
+    }
+}
+
 } // namespace lambdifier

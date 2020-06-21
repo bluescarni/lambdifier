@@ -10,6 +10,7 @@
 #include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
+#include <lambdifier/number.hpp>
 #include <lambdifier/variable.hpp>
 
 namespace lambdifier
@@ -53,6 +54,15 @@ void variable::set_name(std::string s)
 {
     detail::check_symbol_name(s);
     name = std::move(s);
+}
+
+expression variable::diff(const std::string &s) const
+{
+    if (s == name) {
+        return expression{number{1}};
+    } else {
+        return expression{number{0}};
+    }
 }
 
 inline namespace literals

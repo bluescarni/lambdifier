@@ -45,8 +45,11 @@ llvm_state::llvm_state(const std::string &name)
     // Set a couple of flags for faster math at the
     // price of potential change of semantics.
     llvm::FastMathFlags fmf;
-    fmf.setAllowReciprocal();
-    fmf.setAllowReassoc();
+    // fmf.setAllowReciprocal();
+    // fmf.setAllowReassoc();
+    // fmf.setNoNaNs();
+    // fmf.setNoInfs();
+    fmf.setFast();
     builder->setFastMathFlags(fmf);
 
     // Create the function pass manager.
