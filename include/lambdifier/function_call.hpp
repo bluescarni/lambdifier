@@ -20,7 +20,7 @@ class LAMBDIFIER_DLL_PUBLIC function_call
 public:
     enum class type { internal, external, builtin };
 
-    using diff_t = std::function<expression(const function_call &, const std::string &)>;
+    using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
 
 private:
     std::string name, display_name;
