@@ -54,21 +54,14 @@ llvm_state::llvm_state(const std::string &name)
 
     // Create the function pass manager.
     fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
-    fpm->add(llvm::createPromoteMemoryToRegisterPass());
-    fpm->add(llvm::createInstructionCombiningPass());
-    fpm->add(llvm::createReassociatePass());
-    fpm->add(llvm::createGVNPass());
-    fpm->add(llvm::createCFGSimplificationPass());
-    fpm->add(llvm::createPromoteMemoryToRegisterPass());
-    fpm->add(llvm::createInstructionCombiningPass());
-    fpm->add(llvm::createReassociatePass());
-    fpm->add(llvm::createGVNPass());
-    fpm->add(llvm::createCFGSimplificationPass());
-    fpm->add(llvm::createPromoteMemoryToRegisterPass());
-    fpm->add(llvm::createInstructionCombiningPass());
-    fpm->add(llvm::createReassociatePass());
-    fpm->add(llvm::createGVNPass());
-    fpm->add(llvm::createCFGSimplificationPass());
+    // TODO tunable param.
+    for (auto i = 0; i < 3; ++i) {
+        fpm->add(llvm::createPromoteMemoryToRegisterPass());
+        fpm->add(llvm::createInstructionCombiningPass());
+        fpm->add(llvm::createReassociatePass());
+        fpm->add(llvm::createGVNPass());
+        fpm->add(llvm::createCFGSimplificationPass());
+    }
     fpm->doInitialization();
 }
 
