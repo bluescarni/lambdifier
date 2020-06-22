@@ -99,7 +99,7 @@ void llvm_state::verify_function(llvm::Function *f)
 {
     std::string err_report;
     llvm::raw_string_ostream ostr(err_report);
-    if (llvm::verifyFunction(*f, &ostr)) {
+    if (llvm::verifyFunction(*f, &ostr) && verify) {
         // Remove function before throwing.
         f->eraseFromParent();
         throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
@@ -181,6 +181,9 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
     vec_arg.setName("arg.vector");
     // Specify that this is a read-only pointer argument.
     vec_arg.addAttr(llvm::Attribute::ReadOnly);
+    // Specify that the function does not make any copies of the
+    // pointer argument that outlive the function itself.
+    vec_arg.addAttr(llvm::Attribute::NoCapture);
 
     // Create a new basic block to start insertion into.
     auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
@@ -286,6 +289,16 @@ std::uintptr_t llvm_state::jit_lookup(const std::string &name)
 llvm_state::f_ptr llvm_state::fetch(const std::string &name)
 {
     return reinterpret_cast<double (*)(const double *)>(jit_lookup(name + ".vecargs"));
+}
+
+void llvm_state::set_verify(bool f)
+{
+    verify = f;
+}
+
+bool llvm_state::get_verify() const
+{
+    return verify;
 }
 
 } // namespace lambdifier

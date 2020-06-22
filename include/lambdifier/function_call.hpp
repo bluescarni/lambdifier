@@ -1,7 +1,6 @@
 #ifndef LAMBDIFIER_FUNCTION_CALL_HPP
 #define LAMBDIFIER_FUNCTION_CALL_HPP
 
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -18,20 +17,18 @@ namespace lambdifier
 class LAMBDIFIER_DLL_PUBLIC function_call
 {
 public:
-    enum class type { internal, external, builtin };
-
-    using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
+    bool disable_verify = false;
     using eval_t = std::function<double(const std::vector<expression> &, std::unordered_map<std::string, double> &)>;
     using eval_batch_t
         = std::function<void(const std::vector<expression> &, std::unordered_map<std::string, std::vector<double>> &,
                              std::vector<double> &)>;
+    enum class type { internal, external, builtin };
 
 private:
     std::string name, display_name;
     std::vector<expression> args;
     std::vector<llvm::Attribute::AttrKind> attributes;
     type ty = type::internal;
-    diff_t diff_f;
     eval_t eval_f;
     eval_batch_t eval_batch_f;
 
@@ -49,9 +46,9 @@ public:
 
     const std::vector<llvm::Attribute::AttrKind> &get_attributes() const;
     type get_type() const;
-    diff_t get_diff_f() const;
     eval_t get_eval_f() const;
     eval_batch_t get_eval_batch_f() const;
+    bool get_disable_verify();
 
     // Setters.
     void set_name(std::string);
@@ -59,9 +56,9 @@ public:
     void set_args(std::vector<expression>);
     void set_attributes(std::vector<llvm::Attribute::AttrKind>);
     void set_type(type);
-    void set_diff_f(diff_t);
     void set_eval_f(eval_t);
     void set_eval_batch_f(eval_batch_t);
+    void set_disable_verify(bool);
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
@@ -70,7 +67,6 @@ public:
     double evaluate(std::unordered_map<std::string, double> &) const;
     void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
 
-    expression diff(const std::string &) const;
 };
 
 } // namespace lambdifier

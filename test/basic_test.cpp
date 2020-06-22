@@ -18,12 +18,10 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    auto ex = sin(x) * sqrt(x);
-    auto ex_prime = ex.diff("x").diff("x").diff("x");
-    std::cout << ex_prime << '\n';
+    auto ex = pow(sin(x) * sqrt(x), c);
+    std::cout << ex << '\n';
 
     s.add_expression("f", ex);
-    s.add_expression("fprime", ex_prime);
 
     std::cout << s.dump() << '\n';
 

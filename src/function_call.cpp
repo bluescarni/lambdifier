@@ -57,11 +57,6 @@ function_call::type function_call::get_type() const
     return ty;
 }
 
-function_call::diff_t function_call::get_diff_f() const
-{
-    return diff_f;
-}
-
 function_call::eval_t function_call::get_eval_f() const
 {
     return eval_f;
@@ -108,11 +103,6 @@ void function_call::set_type(type t)
     }
 }
 
-void function_call::set_diff_f(diff_t f)
-{
-    diff_f = std::move(f);
-}
-
 void function_call::set_eval_f(eval_t f)
 {
     eval_f = std::move(f);
@@ -125,6 +115,10 @@ void function_call::set_eval_batch_f(eval_batch_t f)
 
 llvm::Value *function_call::codegen(llvm_state &s) const
 {
+    if (disable_verify) {
+        s.set_verify(false);
+    }
+
     llvm::Function *callee_f;
 
     if (ty == type::internal) {
@@ -210,7 +204,12 @@ llvm::Value *function_call::codegen(llvm_state &s) const
         }
     }
 
-    return s.get_builder().CreateCall(callee_f, args_v, "calltmp");
+    auto r = s.get_builder().CreateCall(callee_f, args_v, "calltmp");
+    // NOTE: not sure what this does exactly, but the optimized
+    // IR from clang has this.
+    r->setTailCall(true);
+
+    return r;
 }
 
 std::string function_call::to_string() const
@@ -247,16 +246,14 @@ void function_call::evaluate(std::unordered_map<std::string, std::vector<double>
     }
 }
 
-expression function_call::diff(const std::string &s) const
+bool function_call::get_disable_verify()
 {
-    if (diff_f) {
-        return diff_f(args, s);
-    } else {
-        // TODO
-        throw std::runtime_error("No diff implemented for this function call" + display_name);
-    }
+    return disable_verify;
 }
 
-
+void function_call::set_disable_verify(bool f)
+{
+    disable_verify = f;
+}
 
 } // namespace lambdifier
