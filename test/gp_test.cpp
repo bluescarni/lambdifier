@@ -12,19 +12,19 @@
 
 using namespace lambdifier;
 
-static std::random_device rd;
-static std::mt19937 gen(rd());
+// The seed is fixed as to get always the same expression
+static std::mt19937 gen(12345u);
 static std::uniform_int_distribution<unsigned> random_all(0, 3);
 static std::uniform_real_distribution<double> rng01(0., 1.);
 
 enum kernel_types { number_t, variable_t, binary_t, unary_t };
 
 static std::vector<char> allowed_bo = {'+', '-', '*', '/'};
-static std::vector<expression (*)(expression)> allowed_func
-    = {lambdifier::exp, lambdifier::sin, lambdifier::cos, lambdifier::log};
+static std::vector<expression (*)(expression)> allowed_func = {lambdifier::exp, lambdifier::sin, lambdifier::cos};
 static std::vector<double> allowed_numbers = {3.14, -2.34};
 static std::vector<std::string> allowed_variables = {"x", "y"};
 
+// ------------------------------------SOME HELPER FUNCTIONS --------------------------------------
 template <typename Iter, typename rng>
 Iter random_element(Iter start, Iter end, rng &g)
 {
@@ -33,6 +33,42 @@ Iter random_element(Iter start, Iter end, rng &g)
     return start;
 }
 
+std::vector<std::vector<double>> random_args_vv(unsigned N, unsigned n)
+{
+    std::uniform_real_distribution<double> rngm11(-1, 1.);
+    std::vector<std::vector<double>> retval(N, std::vector<double>(n, 0u));
+    for (auto &vec : retval) {
+        for (auto &el : vec) {
+            el = rngm11(gen);
+        }
+    }
+    return retval;
+}
+
+std::vector<std::unordered_map<std::string, double>> vv_to_vd(const std::vector<std::vector<double>> &in)
+{
+    std::vector<std::unordered_map<std::string, double>> retval(in.size());
+    for (auto i = 0u; i < in.size(); ++i) {
+        retval[i]["x"] = in[i][0];
+        retval[i]["y"] = in[i][1];
+    }
+    return retval;
+}
+
+std::unordered_map<std::string, std::vector<double>> vv_to_dv(const std::vector<std::vector<double>> &in)
+{
+    std::unordered_map<std::string, std::vector<double>> retval;
+    std::vector<double> x_vec(in.size()), y_vec(in.size());
+    for (auto i = 0u; i < in.size(); ++i) {
+        x_vec[i] = in[i][0];
+        y_vec[i] = in[i][1];
+    }
+    retval["x"] = x_vec;
+    retval["y"] = y_vec;
+    return retval;
+}
+
+// ------------------------------------Basic GP classes--------------------------------------
 lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth = 0u)
 {
     unsigned type;
@@ -129,38 +165,8 @@ void crossover(lambdifier::expression &ex1, lambdifier::expression &ex2, double 
     inject_subtree(ex2, sub_ex1, cr_p);
 }
 
-std::vector<std::vector<double>> random_args_vv(unsigned N, unsigned n)
-{
-    std::uniform_real_distribution<double> rngm11(-1, 1.);
-    std::vector<std::vector<double>> retval(N, std::vector<double>(n, 0u));
-    for (auto &vec : retval) {
-        for (auto &el : vec) {
-            el = rngm11(gen);
-        }
-    }
-    return retval;
-}
-
-std::vector<std::unordered_map<std::string, double>> vv_to_vd(const std::vector<std::vector<double>> &in)
-{
-    std::vector<std::unordered_map<std::string, double>> retval(in.size());
-    for (auto i = 0u; i < in.size(); ++i) {
-        retval[i]["x"] = in[i][0];
-        retval[i]["y"] = in[i][1];
-    }
-    return retval;
-}
-
-std::unordered_map<std::string, std::vector<double>> vv_to_dv(const std::vector<std::vector<double>> &in)
-{
-    std::unordered_map<std::string, std::vector<double>> retval;
-    retval["x"] = in[0];
-    retval["y"] = in[1];
-    return retval;
-}
-
+// ------------------------------------ Main --------------------------------------
 using namespace std::chrono;
-
 int main()
 {
     // Init the LLVM machinery.
@@ -182,34 +188,55 @@ int main()
 
     // 2 - we time the function call from llvm
     unsigned N = 10000u;
+    double res;
     auto func = s.fetch("f");
     auto args_vv = random_args_vv(N, 2u);
     start = high_resolution_clock::now();
     for (auto &args : args_vv) {
-        func(args.data());
+        res = func(args.data());
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N)<< "M\n";
+    std::cout << "Millions of evaluations per second (llvm): " << 1. / (static_cast<double>(duration.count()) / N)
+              << "M\n";
 
     // 3 - we time the function call from evaluate
     auto args_vd = vv_to_vd(args_vv);
     start = high_resolution_clock::now();
     for (auto &args : args_vd) {
-        ex(args);
+        res = ex(args);
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N) << "M\n";
+    std::cout << "Millions of evaluations per second (tree): " << 1. / (static_cast<double>(duration.count()) / N)
+              << "M\n";
 
     // 4 - we time the function call from evaluate_batch
     auto args_dv = vv_to_dv(args_vv);
-    std::vector<double> out(10000);
+    std::vector<double> out(10000, 0.12345);
     start = high_resolution_clock::now();
+
     ex(args_dv, out);
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N) << "M\n";
+    std::cout << "Millions of evaluations per second (tree in one batch): "
+              << 1. / (static_cast<double>(duration.count()) / N) << "M\n";
+
+    // 5 - we time the function call from evaluate_batch (size 200)
+    std::vector<std::unordered_map<std::string, std::vector<double>>> args_dv_batches(10000 / 200);
+    for (auto i = 0u; i < args_dv_batches.size(); ++i) {
+        std::vector<std::vector<double>> tmp(args_vv.begin() + 200 * i, args_vv.begin() + 200 * (i + 1));
+        args_dv_batches[i] = vv_to_dv(tmp);
+    }
+    out = std::vector<double>(200, 0.123);
+    start = high_resolution_clock::now();
+    for (auto i = 0u; i < args_dv_batches.size(); ++i) {
+        ex(args_dv_batches[i], out);
+    }
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Millions of evaluations per second (tree in batches of 200): "
+              << 1. / (static_cast<double>(duration.count()) / N) << "M\n";
 
     return 0;
 }

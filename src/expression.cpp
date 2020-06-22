@@ -49,7 +49,7 @@ double expression::operator()(std::unordered_map<std::string, double> &in) const
     return m_ptr->evaluate(in);
 }
 
-void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double>&out) const
+void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
 {
     return m_ptr->evaluate(in, out);
 }
@@ -83,7 +83,6 @@ expression expression::diff(const std::string &s) const
 {
     return m_ptr->diff(s);
 }
-
 
 bool expression::is_zero() const
 {
