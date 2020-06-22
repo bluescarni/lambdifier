@@ -181,10 +181,10 @@ int main()
 
     // Init the LLVM machinery.
     lambdifier::llvm_state s{"optimized"};
-    auto ex = random_expression(3, 4);
+    auto ex = random_expression(3, 6);
     // We force both variables in.
     while (ex.get_variables().size() < 2u) {
-        ex = random_expression(3, 4);
+        ex = random_expression(3, 6);
     };
     std::cout << "ex: " << ex << "\n";
     s.add_expression("f", ex, true);
