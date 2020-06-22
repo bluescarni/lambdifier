@@ -100,6 +100,10 @@ void function_call::set_diff_f(diff_t f)
 
 llvm::Value *function_call::codegen(llvm_state &s) const
 {
+    if (disable_verify) {
+        s.set_verify(false);
+    }
+
     llvm::Function *callee_f;
 
     if (ty == type::internal) {
@@ -206,6 +210,16 @@ std::string function_call::to_string() const
     retval += ")";
 
     return retval;
+}
+
+bool function_call::get_disable_verify()
+{
+    return disable_verify;
+}
+
+void function_call::set_disable_verify(bool f)
+{
+    disable_verify = f;
 }
 
 expression function_call::diff(const std::string &s) const

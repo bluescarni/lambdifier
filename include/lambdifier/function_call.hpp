@@ -18,6 +18,8 @@ namespace lambdifier
 class LAMBDIFIER_DLL_PUBLIC function_call
 {
 public:
+    bool disable_verify = false;
+
     enum class type { internal, external, builtin };
 
     using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
@@ -42,6 +44,7 @@ public:
     const std::vector<llvm::Attribute::AttrKind> &get_attributes() const;
     type get_type() const;
     diff_t get_diff_f() const;
+    bool get_disable_verify();
 
     // Setters.
     void set_name(std::string);
@@ -50,6 +53,7 @@ public:
     void set_attributes(std::vector<llvm::Attribute::AttrKind>);
     void set_type(type);
     void set_diff_f(diff_t);
+    void set_disable_verify(bool);
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;

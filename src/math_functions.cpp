@@ -135,10 +135,10 @@ expression pow(expression e1, expression e2)
     args.emplace_back(std::move(e1));
     args.emplace_back(std::move(e2));
 
-    function_call fc{"pow", std::move(args)};
-    fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
-                       llvm::Attribute::WillReturn});
-    fc.set_type(function_call::type::external);
+    function_call fc{"llvm.pow", std::move(args)};
+    fc.set_display_name("pow");
+    fc.set_type(function_call::type::builtin);
+    fc.set_disable_verify(true);
 
     return expression{std::move(fc)};
 }
