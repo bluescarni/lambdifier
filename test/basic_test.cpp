@@ -29,7 +29,6 @@ int main()
 
     std::cout << s.dump() << '\n';
 
-    return 0;
 
     // Compile all the functions in the module.
     s.compile();
@@ -49,4 +48,6 @@ int main()
     std::cout << func2(args[0], args[1]) << '\n';
     std::cout << func2(args[0], args[1]) << '\n';
     std::cout << func2(args[0], args[1]) << '\n';
+    return 0;
+
 }

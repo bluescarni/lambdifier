@@ -2,6 +2,7 @@
 #include <iostream>
 #include <random>
 
+#include <chrono>
 #include <lambdifier/binary_operator.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -32,17 +33,20 @@ Iter random_element(Iter start, Iter end, rng &g)
     return start;
 }
 
-lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth)
+lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth = 0u)
 {
     unsigned type;
     if (depth < min_depth) {
         // We get a kernel
         // probability to get any function or a bo is equal
-        type = (rng01(gen) < allowed_func.size() / (allowed_func.size() + allowed_bo.size())) ? kernel_types::unary_t : kernel_types::binary_t;
+        type = (rng01(gen) < allowed_func.size() / (allowed_func.size() + allowed_bo.size())) ? kernel_types::unary_t
+                                                                                              : kernel_types::binary_t;
     } else if (depth >= max_depth) {
         // We get a terminal
         // probability to get a terminal with an input variable or a constant is equal
-        type = (rng01(gen) < allowed_numbers.size() / (allowed_numbers.size() + allowed_variables.size())) ? kernel_types::number_t : kernel_types::variable_t;
+        type = (rng01(gen) < allowed_numbers.size() / (allowed_numbers.size() + allowed_variables.size()))
+                   ? kernel_types::number_t
+                   : kernel_types::variable_t;
     } else {
         // We get whatever
         type = random_all(gen);
@@ -125,29 +129,83 @@ void crossover(lambdifier::expression &ex1, lambdifier::expression &ex2, double 
     inject_subtree(ex2, sub_ex1, cr_p);
 }
 
+std::vector<std::vector<double>> random_args_v(unsigned N, unsigned n)
+{
+    std::uniform_real_distribution<double> rngm11(-1, 1.);
+    std::vector<std::vector<double>> retval(N, std::vector<double>(n, 0u));
+    for (auto &vec : retval) {
+        for (auto &el : vec) {
+            el = rngm11(gen);
+        }
+    }
+    return retval;
+}
+
+std::vector<std::unordered_map<std::string, double>> v_to_d(const std::vector<std::vector<double>> &in)
+{
+    std::vector<std::unordered_map<std::string, double>> retval(in.size());
+    for (auto i = 0u; i < in.size(); ++i) {
+        retval[i]["x"] = in[i][0];
+        retval[i]["y"] = in[i][1];
+    }
+    return retval;
+}
+
+using namespace std::chrono;
+
 int main()
 {
-    auto ex1 = random_expression(2, 4, 0);
-    auto ex2 = random_expression(2, 4, 0);
-
-    std::cout << "ex1: " << ex1 << "\n";
-    std::cout << "ex2: " << ex2 << "\n";
-    crossover(ex1, ex2, 0.3);
-    std::cout << "crossover" << "\n";
-    std::cout << "ex1: " << ex1 << "\n";
-    std::cout << "ex2: " << ex2 << "\n";
-    std::cout << "numbers:" << "\n";
-    std::unordered_map<std::string, double> values{{"x", 1.234}, {"y", 0.123}};
-    std::cout << "ex1: " << ex1(values) << "\n";
-    std::cout << "ex2: " << ex2(values) << "\n";
+    // auto ex1 = random_expression(2, 4);
+    // auto ex2 = random_expression(2, 4);
+    //
+    // std::cout << "ex1: " << ex1 << "\n";
+    // std::cout << "ex2: " << ex2 << "\n";
+    // crossover(ex1, ex2, 0.3);
+    // std::cout << "crossover"
+    //          << "\n";
+    // std::cout << "ex1: " << ex1 << "\n";
+    // std::cout << "ex2: " << ex2 << "\n";
+    // std::cout << "numbers:"
+    //          << "\n";
+    // std::unordered_map<std::string, double> values{{"x", 1.234}, {"y", 0.123}};
+    // std::cout << "ex1: " << ex1(values) << "\n";
+    // std::cout << "ex2: " << ex2(values) << "\n";
 
     // Init the LLVM machinery.
-    // lambdifier::llvm_state s{"unoptimized"};
-    // lambdifier::llvm_state s_opt{"optimized"};
-    //
-    // s_opt.add_expression("f", ex, true);
-    // s.add_expression("f", ex, false);
-    // std::cout << s.dump() << '\n';
-    // std::cout << s_opt.dump() << '\n';
+    lambdifier::llvm_state s{"optimized"};
+    auto ex = random_expression(3, 10);
+    // We force both variables in.
+    while (ex.get_variables().size() < 2u) {
+        ex = random_expression(3, 10);
+    };
+    std::cout << "ex: " << ex << "\n";
+    s.add_expression("f", ex, true);
+
+    // 1 - We time the compilation into llvm
+    auto start = high_resolution_clock::now();
+    s.compile();
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Time to compile the expression (microseconds): " << duration.count() << "\n";
+    // 2 - we time the function call from llvm
+    unsigned N = 10000u;
+    auto func = s.fetch("f");
+    auto args_v = random_args_v(N, 2u);
+    start = high_resolution_clock::now();
+    for (auto &args : args_v) {
+        func(args.data());
+    }
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Time to 10000 call of compiled expression (microseconds): " << duration.count() << "\n";
+    // 3 - we time the function call from evaluate
+    auto args_d = v_to_d(args_v);
+    start = high_resolution_clock::now();
+    for (auto &args : args_d) {
+        ex(args);
+    }
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Time to 10000 evaluation of the tree (microseconds): " << duration.count() << "\n";
     return 0;
 }
