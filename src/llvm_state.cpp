@@ -181,6 +181,9 @@ void llvm_state::add_vecargs_expression(const std::string &name, bool optimize, 
     vec_arg.setName("arg.vector");
     // Specify that this is a read-only pointer argument.
     vec_arg.addAttr(llvm::Attribute::ReadOnly);
+    // Specify that the function does not make any copies of the
+    // pointer argument that outlive the function itself.
+    vec_arg.addAttr(llvm::Attribute::NoCapture);
 
     // Create a new basic block to start insertion into.
     auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);

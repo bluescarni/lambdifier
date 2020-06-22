@@ -185,7 +185,12 @@ llvm::Value *function_call::codegen(llvm_state &s) const
         }
     }
 
-    return s.get_builder().CreateCall(callee_f, args_v, "calltmp");
+    auto r = s.get_builder().CreateCall(callee_f, args_v, "calltmp");
+    // NOTE: not sure what this does exactly, but the optimized
+    // IR from clang has this.
+    r->setTailCall(true);
+
+    return r;
 }
 
 std::string function_call::to_string() const
