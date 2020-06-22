@@ -2,10 +2,9 @@
 #include <cmath>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
-
 
 #include <llvm/IR/Value.h>
 
@@ -47,7 +46,6 @@ std::string expression::to_string() const
 
 double expression::operator()(std::unordered_map<std::string, double> &values) const
 {
-    auto names = get_variables();
     return m_ptr->evaluate(values);
 }
 
@@ -80,6 +78,7 @@ expression expression::diff(const std::string &s) const
 {
     return m_ptr->diff(s);
 }
+
 
 bool expression::is_zero() const
 {

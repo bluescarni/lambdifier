@@ -62,6 +62,11 @@ function_call::diff_t function_call::get_diff_f() const
     return diff_f;
 }
 
+function_call::eval_t function_call::get_eval_f() const
+{
+    return eval_f;
+}
+
 // Setters.
 void function_call::set_name(std::string s)
 {
@@ -101,6 +106,11 @@ void function_call::set_type(type t)
 void function_call::set_diff_f(diff_t f)
 {
     diff_f = std::move(f);
+}
+
+void function_call::set_eval_f(eval_t f)
+{
+    eval_f = std::move(f);
 }
 
 llvm::Value *function_call::codegen(llvm_state &s) const
@@ -208,38 +218,23 @@ std::string function_call::to_string() const
     return retval;
 }
 
-double function_call::evaluate(std::unordered_map<std::string, double> &values) const
+double function_call::evaluate(std::unordered_map<std::string, double> &v) const
 {
-    if (display_name.compare("sin") == 0) {
-        return std::sin(args[0](values));
-    } else if (display_name.compare("cos") == 0) {
-        return std::cos(args[0](values));
-    } else if (display_name.compare("pow") == 0) {
-        return std::pow(args[0](values), args[1](values));
-    } else if (display_name.compare("exp") == 0) {
-        return std::exp(args[0](values));
-    } else if (display_name.compare("exp2") == 0) {
-        return std::exp2(args[0](values));
-    } else if (display_name.compare("log") == 0) {
-        return std::log(args[0](values));
-    } else if (display_name.compare("log2") == 0) {
-        return std::log2(args[0](values));
-    } else if (display_name.compare("log10") == 0) {
-        return std::log10(args[0](values));
-    } else if (display_name.compare("sqrt") == 0) {
-        return std::sqrt(args[0](values));
+    if (eval_f) {
+        return eval_f(args, v);
     } else {
-        assert(display_name.compare("abs"));
-        return std::fabs(args[0](values));
+        // TODO
+        throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
     }
 }
+
 expression function_call::diff(const std::string &s) const
 {
     if (diff_f) {
         return diff_f(args, s);
     } else {
         // TODO
-        throw std::runtime_error("No diff implemented for this function call");
+        throw std::runtime_error("No diff implemented for this function call" + display_name);
     }
 }
 

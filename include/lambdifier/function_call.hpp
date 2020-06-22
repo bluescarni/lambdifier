@@ -21,6 +21,8 @@ public:
     enum class type { internal, external, builtin };
 
     using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
+    using eval_t = std::function<double(const std::vector<expression> &, std::unordered_map<std::string, double> &)>;
+
 
 private:
     std::string name, display_name;
@@ -28,6 +30,7 @@ private:
     std::vector<llvm::Attribute::AttrKind> attributes;
     type ty = type::internal;
     diff_t diff_f;
+    eval_t eval_f;
 
 public:
     explicit function_call(std::string, std::vector<expression>);
@@ -44,6 +47,8 @@ public:
     const std::vector<llvm::Attribute::AttrKind> &get_attributes() const;
     type get_type() const;
     diff_t get_diff_f() const;
+    eval_t get_eval_f() const;
+
 
     // Setters.
     void set_name(std::string);
@@ -52,12 +57,14 @@ public:
     void set_attributes(std::vector<llvm::Attribute::AttrKind>);
     void set_type(type);
     void set_diff_f(diff_t);
+    void set_eval_f(eval_t);
+
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
-    double evaluate(std::unordered_map<std::string, double> &) const;
 
+    double evaluate(std::unordered_map<std::string, double> &) const;
     expression diff(const std::string &) const;
 };
 

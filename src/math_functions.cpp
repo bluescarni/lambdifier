@@ -28,6 +28,15 @@ expression sin(expression e)
 
         return cos(args[0]) * args[0].diff(s);
     });
+    fc.set_eval_f([](const std::vector<expression> &args, std::unordered_map<std::string, double> &v) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::sin(args[0](v));
+    });
 
     return expression{std::move(fc)};
 }
@@ -48,6 +57,15 @@ expression cos(expression e)
         }
 
         return -sin(args[0]) * args[0].diff(s);
+    });
+    fc.set_eval_f([](const std::vector<expression> &args, std::unordered_map<std::string, double> &v) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::cos (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::cos(args[0](v));
     });
 
     return expression{std::move(fc)};
@@ -142,6 +160,16 @@ expression exp(expression e)
     fc.set_display_name("exp");
     fc.set_type(function_call::type::builtin);
 
+    fc.set_eval_f([](const std::vector<expression> &args, std::unordered_map<std::string, double> &v) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::exp (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::exp(args[0](v));
+    });
+
     return expression{std::move(fc)};
 }
 
@@ -165,6 +193,16 @@ expression log(expression e)
     function_call fc{"llvm.log", std::move(args)};
     fc.set_display_name("log");
     fc.set_type(function_call::type::builtin);
+
+    fc.set_eval_f([](const std::vector<expression> &args, std::unordered_map<std::string, double> &v) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::log (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::log(args[0](v));
+    });
 
     return expression{std::move(fc)};
 }
