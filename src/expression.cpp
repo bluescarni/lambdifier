@@ -44,9 +44,14 @@ std::string expression::to_string() const
     return m_ptr->to_string();
 }
 
-double expression::operator()(std::unordered_map<std::string, double> &values) const
+double expression::operator()(std::unordered_map<std::string, double> &in) const
 {
-    return m_ptr->evaluate(values);
+    return m_ptr->evaluate(in);
+}
+
+void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double>&out) const
+{
+    return m_ptr->evaluate(in, out);
 }
 
 std::vector<std::string> expression::get_variables() const

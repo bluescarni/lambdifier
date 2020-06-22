@@ -38,6 +38,18 @@ expression sin(expression e)
 
         return std::sin(args[0](v));
     });
+    fc.set_eval_batch_f([](const std::vector<expression> &args, std::unordered_map<std::string, std::vector<double>> &in,
+                     std::vector<double> &out) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+        args[0](in, out);
+        for (auto i = 0u; i < out.size(); ++i) {
+            out[i] = std::sin(out[i]);
+        }
+    });
 
     return expression{std::move(fc)};
 }
@@ -67,6 +79,18 @@ expression cos(expression e)
         }
 
         return std::cos(args[0](v));
+    });
+    fc.set_eval_batch_f([](const std::vector<expression> &args, std::unordered_map<std::string, std::vector<double>> &in,
+                     std::vector<double> &out) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+        args[0](in, out);
+        for (auto i = 0u; i < out.size(); ++i) {
+            out[i] = std::cos(out[i]);
+        }
     });
 
     return expression{std::move(fc)};
@@ -179,6 +203,18 @@ expression exp(expression e)
 
         return std::exp(args[0](v));
     });
+    fc.set_eval_batch_f([](const std::vector<expression> &args, std::unordered_map<std::string, std::vector<double>> &in,
+                     std::vector<double> &out) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+        args[0](in, out);
+        for (auto i = 0u; i < out.size(); ++i) {
+            out[i] = std::exp(out[i]);
+        }
+    });
 
     return expression{std::move(fc)};
 }
@@ -212,6 +248,18 @@ expression log(expression e)
         }
 
         return std::log(args[0](v));
+    });
+    fc.set_eval_batch_f([](const std::vector<expression> &args, std::unordered_map<std::string, std::vector<double>> &in,
+                     std::vector<double> &out) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+        args[0](in, out);
+        for (auto i = 0u; i < out.size(); ++i) {
+            out[i] = std::log(out[i]);
+        }
     });
 
     return expression{std::move(fc)};

@@ -30,6 +30,7 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual llvm::Value *codegen(llvm_state &) const = 0;
     virtual std::string to_string() const = 0;
     virtual double evaluate(std::unordered_map<std::string, double> &) const = 0;
+    virtual void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const = 0;
     virtual expression diff(const std::string &) const = 0;
 };
 
@@ -61,10 +62,16 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
         return m_value.to_string();
     }
 
-    double evaluate(std::unordered_map<std::string, double> &values) const final
+    double evaluate(std::unordered_map<std::string, double> &in) const final
     {
-        return m_value.evaluate(values);
+        return m_value.evaluate(in);
     }
+
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const final
+    {
+        m_value.evaluate(in, out);
+    }
+
     expression diff(const std::string &) const final;
 };
 
@@ -98,7 +105,9 @@ public:
 
     expression(const expression &);
     expression(expression &&) noexcept;
+    // Call operators on double. Normal and batch version
     double operator()(std::unordered_map<std::string, double> &) const;
+    void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double>&) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;

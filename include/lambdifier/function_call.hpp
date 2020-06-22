@@ -22,7 +22,9 @@ public:
 
     using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
     using eval_t = std::function<double(const std::vector<expression> &, std::unordered_map<std::string, double> &)>;
-
+    using eval_batch_t
+        = std::function<void(const std::vector<expression> &, std::unordered_map<std::string, std::vector<double>> &,
+                             std::vector<double> &)>;
 
 private:
     std::string name, display_name;
@@ -31,6 +33,7 @@ private:
     type ty = type::internal;
     diff_t diff_f;
     eval_t eval_f;
+    eval_batch_t eval_batch_f;
 
 public:
     explicit function_call(std::string, std::vector<expression>);
@@ -48,7 +51,7 @@ public:
     type get_type() const;
     diff_t get_diff_f() const;
     eval_t get_eval_f() const;
-
+    eval_batch_t get_eval_batch_f() const;
 
     // Setters.
     void set_name(std::string);
@@ -58,13 +61,15 @@ public:
     void set_type(type);
     void set_diff_f(diff_t);
     void set_eval_f(eval_t);
-
+    void set_eval_batch_f(eval_batch_t);
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
 
     double evaluate(std::unordered_map<std::string, double> &) const;
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+
     expression diff(const std::string &) const;
 };
 

@@ -45,8 +45,17 @@ std::string variable::to_string() const
     return name;
 }
 
-double variable::evaluate(std::unordered_map<std::string, double> &values) const {
-    return values[name];
+double variable::evaluate(std::unordered_map<std::string, double> &in) const {
+    return in[name];
+}
+
+void variable::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const {
+    // we need to distinguish these cases as at this level as to avoid to create an empty map.
+    if (in.find(name) != in.end()) {
+        out =  in[name];
+    } else {
+        out = std::vector<double>(out.size(), 0.);
+    }
 }
 
 

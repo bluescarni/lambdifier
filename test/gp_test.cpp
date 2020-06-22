@@ -129,7 +129,7 @@ void crossover(lambdifier::expression &ex1, lambdifier::expression &ex2, double 
     inject_subtree(ex2, sub_ex1, cr_p);
 }
 
-std::vector<std::vector<double>> random_args_v(unsigned N, unsigned n)
+std::vector<std::vector<double>> random_args_vv(unsigned N, unsigned n)
 {
     std::uniform_real_distribution<double> rngm11(-1, 1.);
     std::vector<std::vector<double>> retval(N, std::vector<double>(n, 0u));
@@ -141,13 +141,21 @@ std::vector<std::vector<double>> random_args_v(unsigned N, unsigned n)
     return retval;
 }
 
-std::vector<std::unordered_map<std::string, double>> v_to_d(const std::vector<std::vector<double>> &in)
+std::vector<std::unordered_map<std::string, double>> vv_to_vd(const std::vector<std::vector<double>> &in)
 {
     std::vector<std::unordered_map<std::string, double>> retval(in.size());
     for (auto i = 0u; i < in.size(); ++i) {
         retval[i]["x"] = in[i][0];
         retval[i]["y"] = in[i][1];
     }
+    return retval;
+}
+
+std::unordered_map<std::string, std::vector<double>> vv_to_dv(const std::vector<std::vector<double>> &in)
+{
+    std::unordered_map<std::string, std::vector<double>> retval;
+    retval["x"] = in[0];
+    retval["y"] = in[1];
     return retval;
 }
 
@@ -173,10 +181,10 @@ int main()
 
     // Init the LLVM machinery.
     lambdifier::llvm_state s{"optimized"};
-    auto ex = random_expression(6, 10);
+    auto ex = random_expression(3, 4);
     // We force both variables in.
     while (ex.get_variables().size() < 2u) {
-        ex = random_expression(6, 10);
+        ex = random_expression(3, 4);
     };
     std::cout << "ex: " << ex << "\n";
     s.add_expression("f", ex, true);
@@ -190,22 +198,32 @@ int main()
     // 2 - we time the function call from llvm
     unsigned N = 10000u;
     auto func = s.fetch("f");
-    auto args_v = random_args_v(N, 2u);
+    auto args_vv = random_args_vv(N, 2u);
     start = high_resolution_clock::now();
-    for (auto &args : args_v) {
+    for (auto &args : args_vv) {
         func(args.data());
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
     std::cout << "Time to 10000 call of compiled expression (microseconds): " << duration.count() << "\n";
     // 3 - we time the function call from evaluate
-    auto args_d = v_to_d(args_v);
+    auto args_vd = vv_to_vd(args_vv);
     start = high_resolution_clock::now();
-    for (auto &args : args_d) {
+    for (auto &args : args_vd) {
         ex(args);
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
     std::cout << "Time to 10000 evaluations of the tree (microseconds): " << duration.count() << "\n";
+
+    // 4 - we time the function call from evaluate_batch
+    auto args_dv = vv_to_dv(args_vv);
+    std::vector<double> out(10000);
+    start = high_resolution_clock::now();
+    ex(args_dv, out);
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Time to 10000 evaluations of the tree in one batch (microseconds): " << duration.count() << "\n";
+
     return 0;
 }
