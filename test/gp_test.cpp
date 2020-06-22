@@ -163,22 +163,6 @@ using namespace std::chrono;
 
 int main()
 {
-    // auto ex1 = random_expression(2, 4);
-    // auto ex2 = random_expression(2, 4);
-    //
-    // std::cout << "ex1: " << ex1 << "\n";
-    // std::cout << "ex2: " << ex2 << "\n";
-    // crossover(ex1, ex2, 0.3);
-    // std::cout << "crossover"
-    //          << "\n";
-    // std::cout << "ex1: " << ex1 << "\n";
-    // std::cout << "ex2: " << ex2 << "\n";
-    // std::cout << "numbers:"
-    //          << "\n";
-    // std::unordered_map<std::string, double> values{{"x", 1.234}, {"y", 0.123}};
-    // std::cout << "ex1: " << ex1(values) << "\n";
-    // std::cout << "ex2: " << ex2(values) << "\n";
-
     // Init the LLVM machinery.
     lambdifier::llvm_state s{"optimized"};
     auto ex = random_expression(3, 6);
@@ -195,6 +179,7 @@ int main()
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
     std::cout << "Time to compile the expression (microseconds): " << duration.count() << "\n";
+
     // 2 - we time the function call from llvm
     unsigned N = 10000u;
     auto func = s.fetch("f");
@@ -205,7 +190,8 @@ int main()
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Time to 10000 call of compiled expression (microseconds): " << duration.count() << "\n";
+    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N)<< "M\n";
+
     // 3 - we time the function call from evaluate
     auto args_vd = vv_to_vd(args_vv);
     start = high_resolution_clock::now();
@@ -214,7 +200,7 @@ int main()
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Time to 10000 evaluations of the tree (microseconds): " << duration.count() << "\n";
+    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N) << "M\n";
 
     // 4 - we time the function call from evaluate_batch
     auto args_dv = vv_to_dv(args_vv);
@@ -223,7 +209,7 @@ int main()
     ex(args_dv, out);
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Time to 10000 evaluations of the tree in one batch (microseconds): " << duration.count() << "\n";
+    std::cout << "Millions of evaluations per second: " << 1./(static_cast<double>(duration.count()) / N) << "M\n";
 
     return 0;
 }
