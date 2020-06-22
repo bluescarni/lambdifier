@@ -71,19 +71,4 @@ std::string binary_operator::to_string() const
     return "(" + lhs.to_string() + " " + op + " " + rhs.to_string() + ")";
 }
 
-expression binary_operator::diff(const std::string &s) const
-{
-    switch (op) {
-        case '+':
-            return lhs.diff(s) + rhs.diff(s);
-        case '-':
-            return lhs.diff(s) - rhs.diff(s);
-        case '*':
-            return lhs.diff(s) * rhs + lhs * rhs.diff(s);
-        default:
-            assert(op == '/');
-            return (lhs.diff(s) * rhs - lhs * rhs.diff(s)) / (rhs * rhs);
-    }
-}
-
 } // namespace lambdifier

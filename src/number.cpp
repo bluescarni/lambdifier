@@ -38,11 +38,6 @@ void number::set_value(double x)
     value = x;
 }
 
-expression number::diff(const std::string &) const
-{
-    return expression{number{0}};
-}
-
 inline namespace literals
 {
 

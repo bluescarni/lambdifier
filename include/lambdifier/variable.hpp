@@ -29,8 +29,6 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
-
-    expression diff(const std::string &) const;
 };
 
 inline namespace literals
