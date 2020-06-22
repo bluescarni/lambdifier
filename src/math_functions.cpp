@@ -7,6 +7,7 @@
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/math_functions.hpp>
+#include <lambdifier/number.hpp>
 
 namespace lambdifier
 {
@@ -80,6 +81,15 @@ expression tan(expression e)
     fc.set_attributes({llvm::Attribute::NoUnwind, llvm::Attribute::Speculatable, llvm::Attribute::ReadNone,
                        llvm::Attribute::WillReturn});
     fc.set_type(function_call::type::external);
+    fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument("Inconsistent number of arguments when taking the derivative of the tangent (1 "
+                                        "argument was expected, but "
+                                        + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return expression{number{1}} / (cos(args[0]) * cos(args[0])) * args[0].diff(s);
+    });
 
     return expression{std::move(fc)};
 }
@@ -239,6 +249,16 @@ expression sqrt(expression e)
     function_call fc{"llvm.sqrt", std::move(args)};
     fc.set_display_name("sqrt");
     fc.set_type(function_call::type::builtin);
+    fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when taking the derivative of the square root (1 "
+                "argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return expression{number{0.5}} / sqrt(args[0]) * args[0].diff(s);
+    });
 
     return expression{std::move(fc)};
 }
