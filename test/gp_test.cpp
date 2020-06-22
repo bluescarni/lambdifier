@@ -17,7 +17,7 @@ static std::mt19937 gen(rd());
 static std::uniform_int_distribution<unsigned> random_all(0, 3);
 static std::uniform_real_distribution<double> rng01(0., 1.);
 
-enum kernel_types { number_t, variable_t, unary_t, binary_t };
+enum kernel_types { number_t, variable_t, binary_t, unary_t };
 
 static std::vector<char> allowed_bo = {'+', '-', '*', '/'};
 static std::vector<expression (*)(expression)> allowed_func
@@ -173,10 +173,10 @@ int main()
 
     // Init the LLVM machinery.
     lambdifier::llvm_state s{"optimized"};
-    auto ex = random_expression(3, 10);
+    auto ex = random_expression(6, 10);
     // We force both variables in.
     while (ex.get_variables().size() < 2u) {
-        ex = random_expression(3, 10);
+        ex = random_expression(6, 10);
     };
     std::cout << "ex: " << ex << "\n";
     s.add_expression("f", ex, true);
@@ -206,6 +206,6 @@ int main()
     }
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Time to 10000 evaluation of the tree (microseconds): " << duration.count() << "\n";
+    std::cout << "Time to 10000 evaluations of the tree (microseconds): " << duration.count() << "\n";
     return 0;
 }

@@ -55,7 +55,7 @@ llvm_state::llvm_state(const std::string &name)
     // Create the function pass manager.
     fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
     // TODO tunable param.
-    for (auto i = 0; i < 3; ++i) {
+    for (auto i = 0; i < 1; ++i) {
         fpm->add(llvm::createPromoteMemoryToRegisterPass());
         fpm->add(llvm::createInstructionCombiningPass());
         fpm->add(llvm::createReassociatePass());
