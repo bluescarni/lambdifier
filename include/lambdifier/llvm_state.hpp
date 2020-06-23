@@ -15,6 +15,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
+// NOTE: expression coming from fwd_decl.hpp
+// in order to avoid circular deps.
 #include <lambdifier/detail/fwd_decl.hpp>
 #include <lambdifier/detail/jit.hpp>
 #include <lambdifier/detail/visibility.hpp>

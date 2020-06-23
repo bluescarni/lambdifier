@@ -47,13 +47,11 @@ llvm_state::llvm_state(const std::string &name, unsigned l) : opt_level(l)
 
     // Create a new builder for the module.
     builder = std::make_unique<llvm::IRBuilder<>>(get_context());
-    if (opt_level >= 3u) {
-        // Set a couple of flags for faster math at the
-        // price of potential change of semantics.
-        llvm::FastMathFlags fmf;
-        fmf.setFast();
-        builder->setFastMathFlags(fmf);
-    }
+    // Set a couple of flags for faster math at the
+    // price of potential change of semantics.
+    llvm::FastMathFlags fmf;
+    fmf.setFast();
+    builder->setFastMathFlags(fmf);
 
     // Create the optimization passes.
     if (opt_level > 0u) {
