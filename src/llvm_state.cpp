@@ -114,7 +114,7 @@ std::string llvm_state::dump() const
     std::string out;
     llvm::raw_string_ostream ostr(out);
     module->print(ostr, nullptr);
-    return out;
+    return ostr.str();
 }
 
 void llvm_state::verify_function(llvm::Function *f)
@@ -124,7 +124,7 @@ void llvm_state::verify_function(llvm::Function *f)
     if (llvm::verifyFunction(*f, &ostr) && verify) {
         // Remove function before throwing.
         f->eraseFromParent();
-        throw std::invalid_argument("Function verification failed. The full error message:\n" + err_report);
+        throw std::invalid_argument("Function verification failed. The full error message:\n" + ostr.str());
     }
 }
 
