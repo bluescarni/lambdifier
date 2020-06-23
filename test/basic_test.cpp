@@ -18,32 +18,28 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    auto ex = pow(sin(x) * sqrt(x), c);
+    auto ex = x + x - x * x;
     std::cout << ex << '\n';
 
-    s.add_expression("f", ex);
+    s.add_expression("f", ex, 10);
 
     std::cout << s.dump() << '\n';
-
 
     // Compile all the functions in the module.
     s.compile();
 
+    return 0;
+
     // Fetch the compiled function.
     auto func1 = s.fetch("f");
-    auto func2 = s.fetch_vararg<2>("f");
+    auto func2 = s.fetch_vararg<1>("f");
+    auto func3 = s.fetch_batch("f");
 
     // Invoke it.
     double args[] = {3.45, 6.78};
-    std::cout << func1(args) << '\n';
-    std::cout << func1(args) << '\n';
-    std::cout << func1(args) << '\n';
-    std::cout << func1(args) << '\n';
-
-    std::cout << func2(args[0], args[1]) << '\n';
-    std::cout << func2(args[0], args[1]) << '\n';
-    std::cout << func2(args[0], args[1]) << '\n';
-    std::cout << func2(args[0], args[1]) << '\n';
-    return 0;
-
+    double out[] = {0, 0};
+    std::cout << func1(args) << ", " << func1(args + 1) << '\n';
+    std::cout << func2(args[0]) << ", " << func2(args[1]) << '\n';
+    func3(out, args);
+    std::cout << out[0] << ", " << out[1] << '\n';
 }
