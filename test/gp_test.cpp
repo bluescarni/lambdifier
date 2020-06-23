@@ -45,6 +45,16 @@ std::vector<std::vector<double>> random_args_vv(unsigned N, unsigned n)
     return retval;
 }
 
+std::vector<double> random_args_batch(unsigned nvars, unsigned batch_size)
+{
+    std::uniform_real_distribution<double> rngm11(-1, 1.);
+    std::vector<double> retval(nvars * batch_size);
+    for (auto &x : retval) {
+        x = rngm11(gen);
+    }
+    return retval;
+}
+
 std::vector<std::unordered_map<std::string, double>> vv_to_vd(const std::vector<std::vector<double>> &in)
 {
     std::vector<std::unordered_map<std::string, double>> retval(in.size());
@@ -176,8 +186,12 @@ int main()
     while (ex.get_variables().size() < 2u) {
         ex = random_expression(3, 6);
     };
+    // Uncomment for simpler expression.
+    // ex = "x"_var * "x"_var + "y"_var + "y"_var * "y"_var - "y"_var * "x"_var;
     std::cout << "ex: " << ex << "\n";
-    s.add_expression("f", ex, true);
+    s.add_expression("f", ex, 10000);
+    s.add_expression("g", ex, 20);
+    std::cout << s.dump() << '\n';
 
     // 1 - We time the compilation into llvm
     auto start = high_resolution_clock::now();
@@ -236,6 +250,28 @@ int main()
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
     std::cout << "Millions of evaluations per second (tree in batches of 200): "
+              << 1. / (static_cast<double>(duration.count()) / N) << "M\n";
+
+    // 6 - we time the function call from llvm batch
+    auto func_batch = s.fetch_batch("f");
+    out = std::vector<double>(10000, 0.12345);
+    auto llvm_batch_args = random_args_batch(2, 10000);
+    start = high_resolution_clock::now();
+    func_batch(out.data(), llvm_batch_args.data());
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Millions of evaluations per second (llvm batch 10000): "
+              << 1. / (static_cast<double>(duration.count()) / N) << "M\n";
+
+    // 7 - we time the function call from llvm batch (20).
+    auto g_batch = s.fetch_batch("g");
+    start = high_resolution_clock::now();
+    for (auto i = 0u; i < 500u; ++i) {
+        g_batch(out.data() + i * 20, llvm_batch_args.data() + 2 * i * 20);
+    }
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    std::cout << "Millions of evaluations per second (llvm batch 20): "
               << 1. / (static_cast<double>(duration.count()) / N) << "M\n";
 
     return 0;
