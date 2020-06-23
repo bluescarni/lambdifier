@@ -1,11 +1,9 @@
 #include <algorithm>
-#include <cmath>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
-
 
 #include <llvm/IR/Value.h>
 
@@ -45,10 +43,14 @@ std::string expression::to_string() const
     return m_ptr->to_string();
 }
 
-double expression::operator()(std::unordered_map<std::string, double> &values) const
+double expression::operator()(std::unordered_map<std::string, double> &in) const
 {
-    auto names = get_variables();
-    return m_ptr->evaluate(values);
+    return m_ptr->evaluate(in);
+}
+
+void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
+    return m_ptr->evaluate(in, out);
 }
 
 std::vector<std::string> expression::get_variables() const
@@ -76,42 +78,10 @@ std::vector<std::string> expression::get_variables() const
     return retval;
 }
 
-expression expression::diff(const std::string &s) const
-{
-    return m_ptr->diff(s);
-}
-
-bool expression::is_zero() const
-{
-    if (auto num_ptr = extract<number>()) {
-        return num_ptr->get_value() == 0.;
-    } else {
-        return false;
-    }
-}
-
-bool expression::is_one() const
-{
-    if (auto num_ptr = extract<number>()) {
-        return num_ptr->get_value() == 1.;
-    } else {
-        return false;
-    }
-}
-
-bool expression::is_finite_number() const
-{
-    if (auto num_ptr = extract<number>()) {
-        return std::isfinite(num_ptr->get_value());
-    } else {
-        return false;
-    }
-}
-
 expression operator+(expression e1, expression e2)
 {
     if (auto e1_nptr = e1.extract<number>(), e2_nptr = e2.extract<number>(); e1_nptr && e2_nptr) {
-        // Both are numbers, sum them.
+        // Both are numbers, add them.
         return expression{number{e1_nptr->get_value() + e2_nptr->get_value()}};
     } else if (e1_nptr && e1_nptr->get_value() == 0) {
         // e1 zero, e2 smybolic.
@@ -155,6 +125,9 @@ expression operator*(expression e1, expression e2)
             // 1 * symbolic = symbolic.
             return e2;
         }
+        // NOTE: if we get here, it means that e1 is a
+        // number different from 0 or 1. We will fall through
+        // the standard case.
     } else if (e2_nptr) {
         if (e2_nptr->get_value() == 0) {
             // symbolic * 0 = 0.
@@ -163,6 +136,9 @@ expression operator*(expression e1, expression e2)
             // symbolic * 1 = symbolic.
             return e1;
         }
+        // NOTE: if we get here, it means that e2 is a
+        // number different from 0 or 1. We will fall through
+        // the standard case.
     }
     // The standard case.
     return expression{binary_operator{'*', std::move(e1), std::move(e2)}};
@@ -170,6 +146,7 @@ expression operator*(expression e1, expression e2)
 
 expression operator/(expression e1, expression e2)
 {
+    // TODO: division simplifications.
     return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 

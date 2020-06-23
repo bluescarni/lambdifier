@@ -2,12 +2,11 @@
 #define LAMBDIFIER_EXPRESSION_HPP
 
 #include <cassert>
-#include <unordered_map>
 #include <memory>
 #include <ostream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -30,7 +29,7 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual llvm::Value *codegen(llvm_state &) const = 0;
     virtual std::string to_string() const = 0;
     virtual double evaluate(std::unordered_map<std::string, double> &) const = 0;
-    virtual expression diff(const std::string &) const = 0;
+    virtual void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const = 0;
 };
 
 template <typename T>
@@ -61,11 +60,16 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
         return m_value.to_string();
     }
 
-    double evaluate(std::unordered_map<std::string, double> &values) const final
+    double evaluate(std::unordered_map<std::string, double> &in) const final
     {
-        return m_value.evaluate(values);
+        return m_value.evaluate(in);
     }
-    expression diff(const std::string &) const final;
+
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const final
+    {
+        m_value.evaluate(in, out);
+    }
+
 };
 
 } // namespace detail
@@ -98,7 +102,9 @@ public:
 
     expression(const expression &);
     expression(expression &&) noexcept;
+    // Call operators on double. Normal and batch version
     double operator()(std::unordered_map<std::string, double> &) const;
+    void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double>&) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;
@@ -108,12 +114,6 @@ public:
     llvm::Value *codegen(llvm_state &) const;
 
     std::string to_string() const;
-
-    expression diff(const std::string &) const;
-
-    bool is_zero() const;
-    bool is_one() const;
-    bool is_finite_number() const;
 
 private:
     detail::expr_inner_base const *ptr() const
@@ -159,31 +159,6 @@ LAMBDIFIER_DLL_PUBLIC expression operator+(expression);
 LAMBDIFIER_DLL_PUBLIC expression operator-(expression);
 
 LAMBDIFIER_DLL_PUBLIC std::ostream &operator<<(std::ostream &, const expression &);
-
-namespace detail
-{
-
-template <typename T>
-concept differentiable_expr = requires(const T &e, const std::string &s)
-{
-    {
-        e.diff(s)
-    }
-    ->same_as<expression>;
-};
-
-template <typename T>
-inline expression expr_inner<T>::diff(const std::string &s) const
-{
-    if constexpr (differentiable_expr<T>) {
-        return m_value.diff(s);
-    } else {
-        // TODO.
-        throw std::runtime_error("diff() not implemented");
-    }
-}
-
-} // namespace detail
 
 } // namespace lambdifier
 

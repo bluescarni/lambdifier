@@ -40,14 +40,13 @@ double number::evaluate(std::unordered_map<std::string, double> &) const
     return value;
 }
 
+void number::evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &out) const {
+        out = std::vector<double>(out.size(), value);
+}
+
 void number::set_value(double x)
 {
     value = x;
-}
-
-expression number::diff(const std::string &) const
-{
-    return expression{number{0}};
 }
 
 inline namespace literals

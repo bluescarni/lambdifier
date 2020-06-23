@@ -82,33 +82,59 @@ std::string binary_operator::to_string() const
     return "(" + lhs.to_string() + " " + op + " " + rhs.to_string() + ")";
 }
 
-double binary_operator::evaluate(std::unordered_map<std::string, double> &values) const
+double binary_operator::evaluate(std::unordered_map<std::string, double> &in) const
 {
     switch (op) {
         case '+':
-            return lhs(values) + rhs(values);
+            return lhs(in) + rhs(in);
         case '-':
-            return lhs(values) - rhs(values);
+            return lhs(in) - rhs(in);
         case '*':
-            return lhs(values) * rhs(values);
+            return lhs(in) * rhs(in);
         default:
             assert(op == '/');
-            return lhs(values) / rhs(values);
+            return lhs(in) / rhs(in);
     }
 }
-expression binary_operator::diff(const std::string &s) const
+
+void binary_operator::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
 {
     switch (op) {
         case '+':
-            return lhs.diff(s) + rhs.diff(s);
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::plus<double>());
+            break;
+        }
         case '-':
-            return lhs.diff(s) - rhs.diff(s);
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::minus<double>());
+            break;
+        }
         case '*':
-            return lhs.diff(s) * rhs + lhs * rhs.diff(s);
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::multiplies<double>());
+            break;
+        }
         default:
+        {
             assert(op == '/');
-            return (lhs.diff(s) * rhs - lhs * rhs.diff(s)) / (rhs * rhs);
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::divides<double>());
+            break;
+        }
     }
 }
+
 
 } // namespace lambdifier
