@@ -28,18 +28,20 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::legacy::FunctionPassManager> fpm;
+    std::unique_ptr<llvm::legacy::PassManager> pm;
     std::unordered_map<std::string, llvm::Value *> named_values;
     bool verify = true;
+    unsigned opt_level;
 
-    LAMBDIFIER_DLL_LOCAL void add_varargs_expression(const std::string &, const expression &, bool,
+    LAMBDIFIER_DLL_LOCAL void add_varargs_expression(const std::string &, const expression &,
                                                      const std::vector<std::string> &);
-    LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, bool, const std::vector<std::string> &);
+    LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, const std::vector<std::string> &);
+    LAMBDIFIER_DLL_LOCAL void add_batch_expression(const std::string &, const std::vector<std::string> &, unsigned);
     LAMBDIFIER_DLL_LOCAL void verify_function(llvm::Function *);
-    LAMBDIFIER_DLL_LOCAL void optimize_function(llvm::Function *);
     std::uintptr_t jit_lookup(const std::string &);
 
 public:
-    explicit llvm_state(const std::string &);
+    explicit llvm_state(const std::string &, unsigned = 3);
 
     llvm_state(const llvm_state &) = delete;
     llvm_state(llvm_state &&) = delete;
@@ -48,7 +50,7 @@ public:
 
     ~llvm_state();
 
-    void add_expression(const std::string &, const expression &, bool = true);
+    void add_expression(const std::string &, const expression &, unsigned = 100u);
 
     llvm::LLVMContext &get_context();
     llvm::IRBuilder<> &get_builder();
@@ -64,6 +66,9 @@ public:
 
     using f_ptr = double (*)(const double *);
     f_ptr fetch(const std::string &);
+
+    using f_batch_ptr = void (*)(double *, const double *);
+    f_batch_ptr fetch_batch(const std::string &);
 
 private:
     template <std::size_t>

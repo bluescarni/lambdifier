@@ -149,7 +149,21 @@ set_target_properties(lambdifier::llvm_headers PROPERTIES INTERFACE_INCLUDE_DIRE
 if(${LLVM_VERSION_MAJOR} EQUAL 10)
   target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers LLVM)
 else()
-  llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS core support instcombine scalaropts orcjit executionengine x86codegen x86info x86desc x86asmparser transformutils)
+  llvm_map_components_to_libnames(LAMBDIFIER_LLVM_LIBS
+    core
+    support
+    instcombine
+    scalaropts
+    orcjit
+    executionengine
+    x86codegen
+    x86info
+    x86desc
+    x86asmparser
+    transformutils
+    vectorize
+    ipo
+  )
   target_link_libraries(lambdifier PUBLIC lambdifier::llvm_headers ${LAMBDIFIER_LLVM_LIBS})
 endif()
 
