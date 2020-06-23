@@ -55,20 +55,38 @@ llvm_state::llvm_state(const std::string &name, unsigned l) : opt_level(l)
         builder->setFastMathFlags(fmf);
     }
 
-    // Create the function pass manager.
-    fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
-    for (auto i = 0u; i < opt_level; ++i) {
-        // fpm->add(llvm::createPromoteMemoryToRegisterPass());
-        // fpm->add(llvm::createInstructionCombiningPass());
-        // fpm->add(llvm::createReassociatePass());
-        // fpm->add(llvm::createGVNPass());
-        // fpm->add(llvm::createCFGSimplificationPass());
-        // fpm->add(llvm::createLoopVectorizePass());
-        // fpm->add(llvm::createSLPVectorizerPass());
-        // fpm->add(llvm::createLoadStoreVectorizerPass());
-        // fpm->add(llvm::createLoopUnrollPass());
+    // Create the optimization passes.
+    if (opt_level > 0u) {
+        // Create the function pass manager.
+        fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+        fpm->add(llvm::createPromoteMemoryToRegisterPass());
+        fpm->add(llvm::createInstructionCombiningPass());
+        fpm->add(llvm::createReassociatePass());
+        fpm->add(llvm::createGVNPass());
+        fpm->add(llvm::createCFGSimplificationPass());
+        fpm->add(llvm::createLoopVectorizePass());
+        fpm->add(llvm::createSLPVectorizerPass());
+        fpm->add(llvm::createLoadStoreVectorizerPass());
+        fpm->add(llvm::createLoopUnrollPass());
+        fpm->doInitialization();
+
+        // The module-level optimizer. See:
+        // https://stackoverflow.com/questions/48300510/llvm-api-optimisation-run
+        pm = std::make_unique<llvm::legacy::PassManager>();
+        llvm::PassManagerBuilder pm_builder;
+        // See here for the defaults:
+        // https://llvm.org/doxygen/PassManagerBuilder_8cpp_source.html
+        pm_builder.OptLevel = opt_level;
+        pm_builder.VerifyInput = true;
+        pm_builder.VerifyOutput = true;
+        pm_builder.Inliner = llvm::createFunctionInliningPass();
+        if (opt_level >= 3u) {
+            pm_builder.SLPVectorize = true;
+            pm_builder.MergeFunctions = true;
+        }
+        pm_builder.populateModulePassManager(*pm);
+        pm_builder.populateFunctionPassManager(*fpm);
     }
-    fpm->doInitialization();
 }
 
 llvm_state::~llvm_state() = default;
@@ -112,11 +130,6 @@ void llvm_state::verify_function(llvm::Function *f)
     }
 }
 
-void llvm_state::optimize_function(llvm::Function *f)
-{
-    fpm->run(*f);
-}
-
 void llvm_state::add_varargs_expression(const std::string &name, const expression &e,
                                         const std::vector<std::string> &vars)
 {
@@ -151,9 +164,6 @@ void llvm_state::add_varargs_expression(const std::string &name, const expressio
 
         // Verify it.
         verify_function(f);
-
-        // Optimize it.
-        optimize_function(f);
     } else {
         // Error reading body, remove function.
         f->eraseFromParent();
@@ -254,9 +264,6 @@ void llvm_state::add_vecargs_expression(const std::string &name, const std::vect
 
         // Verify it.
         verify_function(f);
-
-        // Optimize it.
-        optimize_function(f);
     } else {
         // Error reading body, remove function.
         f->eraseFromParent();
@@ -396,9 +403,6 @@ void llvm_state::add_batch_expression(const std::string &name, const std::vector
 
     // Verify it.
     verify_function(f);
-
-    // Optimize it.
-    optimize_function(f);
 }
 
 void llvm_state::add_expression(const std::string &name, const expression &e, unsigned batch_size)
@@ -416,20 +420,15 @@ void llvm_state::add_expression(const std::string &name, const expression &e, un
     add_varargs_expression(name, e, vars);
     add_vecargs_expression(name, vars);
     add_batch_expression(name, vars, batch_size);
+
+    // Run the optimization pass.
+    if (opt_level > 0u) {
+        pm->run(*module);
+    }
 }
 
 void llvm_state::compile()
 {
-    // TODO: read up:
-    // https://stackoverflow.com/questions/48300510/llvm-api-optimisation-run
-    llvm::legacy::PassManager pm;
-    llvm::PassManagerBuilder pm_builder;
-    pm_builder.OptLevel = 3;
-    pm_builder.DisableUnrollLoops = false;
-    pm_builder.Inliner = llvm::createFunctionInliningPass(50);
-    pm_builder.populateModulePassManager(pm);
-    pm.run(*module);
-
     jitter.add_module(std::move(module));
 }
 

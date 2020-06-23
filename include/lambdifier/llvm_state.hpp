@@ -28,6 +28,7 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::legacy::FunctionPassManager> fpm;
+    std::unique_ptr<llvm::legacy::PassManager> pm;
     std::unordered_map<std::string, llvm::Value *> named_values;
     bool verify = true;
     unsigned opt_level;
@@ -37,7 +38,6 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, const std::vector<std::string> &);
     LAMBDIFIER_DLL_LOCAL void add_batch_expression(const std::string &, const std::vector<std::string> &, unsigned);
     LAMBDIFIER_DLL_LOCAL void verify_function(llvm::Function *);
-    LAMBDIFIER_DLL_LOCAL void optimize_function(llvm::Function *);
     std::uintptr_t jit_lookup(const std::string &);
 
 public:

@@ -12,7 +12,7 @@ using namespace lambdifier::literals;
 int main()
 {
     // Init the LLVM machinery.
-    lambdifier::llvm_state s{"my llvm module", 3};
+    lambdifier::llvm_state s{"my llvm module"};
 
     // Build an expression.
     auto c = 42_num;
