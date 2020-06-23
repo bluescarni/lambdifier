@@ -18,5 +18,3 @@ endfunction()
 
 ADD_LAMBDIFIER_TESTCASE(basic_test)
 ADD_LAMBDIFIER_TESTCASE(gp_test)
-ADD_LAMBDIFIER_TESTCASE(taylor_test)
-
