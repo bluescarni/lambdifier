@@ -105,7 +105,8 @@ endif()
 
 # List of source files.
 set(LAMBDIFIER_SRC_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/llvm_state.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/llvm_state_00.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/llvm_state_01.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/expression.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/number.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/binary_operator.cpp"

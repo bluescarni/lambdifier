@@ -72,6 +72,8 @@ public:
     using f_batch_ptr = void (*)(double *, const double *);
     f_batch_ptr fetch_batch(const std::string &);
 
+    expression to_expression(const std::string &) const;
+
 private:
     template <std::size_t>
     using always_double_t = double;
