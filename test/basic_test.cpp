@@ -18,12 +18,14 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    auto ex = x + x - x * x;
+    auto ex = x + x - x * x + y * cos(x) + pow(x, y) + pow(x, 3_num) * x * x - y;
     std::cout << ex << '\n';
 
     s.add_expression("f", ex, 10);
 
     std::cout << s.dump() << '\n';
+
+    std::cout << s.to_expression("f") << '\n';
 
     // Compile all the functions in the module.
     s.compile();
