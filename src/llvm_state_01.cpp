@@ -160,6 +160,11 @@ void add_llvm_inst_to_value_exp_map(std::unordered_map<const llvm::Value *, expr
                                              / llvm_value_to_expression(op_ptr[1].get(), value_exp_map));
             break;
 
+        case llvm::Instruction::FNeg:
+            assert(op_n == 1u);
+            value_exp_map.emplace(&inst, -llvm_value_to_expression(op_ptr[0].get(), value_exp_map));
+            break;
+
         case llvm::Instruction::Ret:
             assert(!retval);
             assert(op_n == 1u);
