@@ -52,6 +52,11 @@ function_call::type function_call::get_type() const
     return ty;
 }
 
+function_call::diff_t function_call::get_diff_f() const
+{
+    return diff_f;
+}
+
 // Setters.
 void function_call::set_name(std::string s)
 {
@@ -86,6 +91,11 @@ void function_call::set_type(type t)
         default:
             throw std::invalid_argument("Invalid funciton type selected: " + std::to_string(static_cast<int>(t)));
     }
+}
+
+void function_call::set_diff_f(diff_t f)
+{
+    diff_f = std::move(f);
 }
 
 llvm::Value *function_call::codegen(llvm_state &s) const
@@ -200,6 +210,15 @@ std::string function_call::to_string() const
     retval += ")";
 
     return retval;
+}
+
+expression function_call::diff(const std::string &s) const
+{
+    if (diff_f) {
+        return diff_f(args, s);
+    } else {
+        throw std::runtime_error("No diff implemented for the function call '" + to_string() + "'");
+    }
 }
 
 bool function_call::get_disable_verify()

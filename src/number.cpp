@@ -33,6 +33,11 @@ std::string number::to_string() const
     return std::to_string(value);
 }
 
+expression number::diff(const std::string &) const
+{
+    return expression{number{0}};
+}
+
 void number::set_value(double x)
 {
     value = x;

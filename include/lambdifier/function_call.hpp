@@ -1,6 +1,7 @@
 #ifndef LAMBDIFIER_FUNCTION_CALL_HPP
 #define LAMBDIFIER_FUNCTION_CALL_HPP
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -21,11 +22,14 @@ public:
 
     enum class type { internal, external, builtin };
 
+    using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
+
 private:
     std::string name, display_name;
     std::vector<expression> args;
     std::vector<llvm::Attribute::AttrKind> attributes;
     type ty = type::internal;
+    diff_t diff_f;
 
 public:
     explicit function_call(std::string, std::vector<expression>);
@@ -40,6 +44,7 @@ public:
     const std::vector<llvm::Attribute::AttrKind> &get_attributes() const;
     type get_type() const;
     bool get_disable_verify();
+    diff_t get_diff_f() const;
 
     // Setters.
     void set_name(std::string);
@@ -48,10 +53,12 @@ public:
     void set_attributes(std::vector<llvm::Attribute::AttrKind>);
     void set_type(type);
     void set_disable_verify(bool);
+    void set_diff_f(diff_t);
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+    expression diff(const std::string &) const;
 };
 
 } // namespace lambdifier

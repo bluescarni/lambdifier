@@ -8,6 +8,7 @@
 #include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
+#include <lambdifier/number.hpp>
 #include <lambdifier/variable.hpp>
 
 namespace lambdifier
@@ -40,6 +41,15 @@ std::string variable::get_name() const
 std::string variable::to_string() const
 {
     return name;
+}
+
+expression variable::diff(const std::string &s) const
+{
+    if (s == name) {
+        return expression{number{1}};
+    } else {
+        return expression{number{0}};
+    }
 }
 
 void variable::set_name(std::string s)

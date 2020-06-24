@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <iostream>
 
 #include <lambdifier/function_call.hpp>
@@ -18,12 +17,22 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
-    auto ex = x + x - x * x + y * cos(x) + pow(x, y) + pow(x, 3_num) * x * x - y;
+    auto ex = sin(x) * cos(x);
     std::cout << ex << '\n';
 
-    s.add_expression("f", ex, 10);
+    s.add_expression("f", ex, 1);
+    s.add_expression("f1", ex.diff("x"), 1);
+    s.add_expression("f2", s.to_expression("f1").diff("x"), 1);
+    s.add_expression("f3", s.to_expression("f2").diff("x"), 1);
+    s.add_expression("f4", s.to_expression("f3").diff("x"), 1);
+    s.add_expression("f5", s.to_expression("f4").diff("x"), 1);
+    s.add_expression("f6", s.to_expression("f5").diff("x"), 1);
+    s.add_expression("f7", s.to_expression("f6").diff("x"), 1);
+    s.add_expression("f8", s.to_expression("f7").diff("x"), 1);
 
     std::cout << s.dump() << '\n';
+
+    return 0;
 
     std::cout << s.to_expression("f") << '\n';
 

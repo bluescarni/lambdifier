@@ -42,6 +42,11 @@ std::string expression::to_string() const
     return m_ptr->to_string();
 }
 
+expression expression::diff(const std::string &s) const
+{
+    return m_ptr->diff(s);
+}
+
 std::vector<std::string> expression::get_variables() const
 {
     std::vector<std::string> retval;
