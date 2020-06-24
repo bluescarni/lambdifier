@@ -417,7 +417,9 @@ void llvm_state::add_expression(const std::string &name, const expression &e, un
 
     add_varargs_expression(name, e, vars);
     add_vecargs_expression(name, vars);
-    add_batch_expression(name, vars, batch_size);
+    if (batch_size != 0u) {
+        add_batch_expression(name, vars, batch_size);
+    }
 
     // Run the optimization pass.
     if (opt_level > 0u) {
