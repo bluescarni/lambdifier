@@ -63,6 +63,7 @@ public:
     void set_verify(bool);
 
     std::string dump() const;
+    std::string dump_function(const std::string &) const;
 
     void compile();
 

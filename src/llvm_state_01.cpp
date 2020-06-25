@@ -211,4 +211,16 @@ expression llvm_state::to_expression(const std::string &name) const
     return std::move(*retval);
 }
 
+std::string llvm_state::dump_function(const std::string &name) const
+{
+    if (auto f = module->getFunction(name)) {
+        std::string out;
+        llvm::raw_string_ostream ostr(out);
+        f->print(ostr);
+        return ostr.str();
+    } else {
+        throw std::invalid_argument("Could not locate the function called '" + name + "'");
+    }
+}
+
 } // namespace lambdifier
