@@ -150,7 +150,23 @@ expression operator*(expression e1, expression e2)
 
 expression operator/(expression e1, expression e2)
 {
-    // TODO: division simplifications.
+    if (auto e1_nptr = e1.extract<number>(), e2_nptr = e2.extract<number>(); e1_nptr && e2_nptr) {
+        // Both are numbers, divide them.
+        return expression{number{e1_nptr->get_value() / e2_nptr->get_value()}};
+    } else if (e2_nptr) {
+        // e1 is symbolic, e2 a number.
+        if (e2_nptr->get_value() == 1) {
+            // symbolic / 1 = symbolic.
+            return e1;
+        } else if (e2_nptr->get_value() == -1) {
+            // symbolic / -1 = -symbolic.
+            return -std::move(e1);
+        }
+        // NOTE: if we get here, it means that e1 is symbolic and e2 is a
+        // number different from -1 or 1. We will fall through
+        // the standard case.
+    }
+    // The standard case.
     return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 
