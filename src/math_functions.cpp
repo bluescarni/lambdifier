@@ -1,6 +1,7 @@
 #include <initializer_list>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 

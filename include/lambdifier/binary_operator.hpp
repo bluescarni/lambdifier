@@ -1,8 +1,11 @@
 #ifndef LAMBDIFIER_BINARY_OPERATOR_HPP
 #define LAMBDIFIER_BINARY_OPERATOR_HPP
 
+#include <algorithm>
+#include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <llvm/IR/Value.h>
 
@@ -31,7 +34,10 @@ public:
     expression &access_rhs();
     void set_lhs(expression);
     void set_rhs(expression);
-    char get_op() const {return op;};
+    char get_op() const
+    {
+        return op;
+    };
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;

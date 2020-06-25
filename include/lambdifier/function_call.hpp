@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <llvm/IR/Attributes.h>

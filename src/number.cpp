@@ -1,5 +1,6 @@
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/IR/Constants.h>

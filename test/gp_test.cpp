@@ -128,10 +128,10 @@ void mutate(expression &ex, double mut_p, unsigned depth)
 {
     if (rng01(gen) < mut_p) {
         ex = random_expression(2, 4, depth);
-    } else if (auto bo_ptr = ex.extract_unsafe<binary_operator>()) {
+    } else if (auto bo_ptr = ex.extract<binary_operator>()) {
         mutate(bo_ptr->access_lhs(), mut_p, depth + 1);
         mutate(bo_ptr->access_rhs(), mut_p, depth + 1);
-    } else if (auto call_ptr = ex.extract_unsafe<function_call>()) {
+    } else if (auto call_ptr = ex.extract<function_call>()) {
         for (auto &ex : call_ptr->access_args()) {
             mutate(ex, mut_p, depth + 1);
         }
@@ -156,10 +156,10 @@ void inject_subtree(expression &ex, const expression &sub_ex, double cr_p)
 {
     if (rng01(gen) < cr_p) {
         ex = sub_ex;
-    } else if (auto bo_ptr = ex.extract_unsafe<binary_operator>()) {
+    } else if (auto bo_ptr = ex.extract<binary_operator>()) {
         (rng01(gen) < 0.5) ? inject_subtree(bo_ptr->access_lhs(), sub_ex, cr_p)
                            : inject_subtree(bo_ptr->access_rhs(), sub_ex, cr_p);
-    } else if (auto call_ptr = ex.extract_unsafe<function_call>()) {
+    } else if (auto call_ptr = ex.extract<function_call>()) {
         auto exs = call_ptr->access_args();
         inject_subtree(*random_element(exs.begin(), exs.end(), gen), sub_ex, cr_p);
     } else {

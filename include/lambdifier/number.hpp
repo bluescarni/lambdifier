@@ -2,6 +2,8 @@
 #define LAMBDIFIER_NUMBER_HPP
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <llvm/IR/Value.h>
 

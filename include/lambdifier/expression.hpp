@@ -141,7 +141,7 @@ public:
     }
 
     template <typename T>
-    T *extract_unsafe() noexcept
+    T *extract() noexcept
     {
         auto p = dynamic_cast<detail::expr_inner<T> *>(ptr());
         return p == nullptr ? nullptr : &(p->m_value);
