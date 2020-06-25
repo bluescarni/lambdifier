@@ -16,8 +16,12 @@ void forward_pass(const expression &ex, std::vector<double> &node_values,
                   std::vector<std::vector<double>> &node_connections, std::unordered_map<std::string, double> &in,
                   unsigned &node_id)
 {
+    // In the forward pass we do the following things.
+    // 1) fill in the output value of each tree node.
+    // 2) fill in a structure containing, for each node, the id of the input nodes.
+    // The node ids get assigned on the fly by the order of visit, hence node_id is passed by ref.
     const unsigned node_id_copy = node_id;
-    node_values.push_back(ex(in));
+    node_values.push_back(ex(in)); // TODO: node_values must be filled in traversing the tree only once
     std::cout << node_id_copy << ": " << ex << " -> " << node_values.back() << std::endl;
     node_id++;
 
@@ -43,6 +47,10 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
                    std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &gradient,
                    unsigned node_id, double acc = 1.)
 {
+    // In the backward pass we simply apply the composition rule from
+    // the root node, accumulating the value up to the leaves which will then contain (say) dN0/dx = dN0/dN4 * dN4/dN7 * dN7/dx
+    // each variable leaf is treated as an independent variable and then the derivative accumulated in the correct gradient position.
+    
     // Variable
     if (auto var_ptr = ex.extract<variable>()) {
         gradient[var_ptr->get_name()] = gradient[var_ptr->get_name()] + acc;
@@ -51,17 +59,24 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
     if (auto bo_ptr = ex.extract<binary_operator>()) {
         switch (bo_ptr->get_op()) {
             case '+': {
-
+                // lhs (a + b -> a)
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
+                // rhs (a + b -> b)
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
                 break;
             }
             case '-': {
+                // lhs (a - b -> a)
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
+                // rhs (a - b -> -b)
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1, -acc);
                 break;
             }
             case '*': {
-                // lhs
+                // lhs (a*b -> b)
                 backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1,
                               acc * node_values[node_connections[node_id][1]]);
-                // rhs
+                // rhs (a*b -> a)
                 backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1,
                               acc * node_values[node_connections[node_id][0]]);
                 break;
@@ -80,13 +95,11 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
             }
         }
     }
-    // Function call
+    // Function call TODO include multiargs
     if (auto call_ptr = ex.extract<function_call>()) {
-        // In this trivial example we know its sin TODO: make this general
-        double d = 
-
-        backward_pass(call_ptr->get_args()[0], node_values, node_connections, in, gradient, node_id + 1,
-                      acc * std::cos(node_values[node_connections[node_id][0]]));
+        std::unordered_map<std::string, double> in{{"x", node_values[node_connections[node_id][0]]}};
+        auto value = call_ptr->get_diff_f()(std::vector<expression>{"x"_var}, "x")(in);
+        backward_pass(call_ptr->get_args()[0], node_values, node_connections, in, gradient, node_id + 1, acc * value);
     }
 }
 
