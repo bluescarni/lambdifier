@@ -79,7 +79,7 @@ std::unordered_map<std::string, std::vector<double>> vv_to_dv(const std::vector<
 }
 
 // ------------------------------------Basic GP classes--------------------------------------
-lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth = 0u)
+expression random_expression(unsigned min_depth, unsigned max_depth, unsigned depth = 0u)
 {
     unsigned type;
     if (depth < min_depth) {
@@ -124,7 +124,7 @@ lambdifier::expression random_expression(unsigned min_depth, unsigned max_depth,
     }
 }
 
-void mutate(lambdifier::expression &ex, double mut_p, unsigned depth)
+void mutate(expression &ex, double mut_p, unsigned depth)
 {
     if (rng01(gen) < mut_p) {
         ex = random_expression(2, 4, depth);
@@ -138,7 +138,7 @@ void mutate(lambdifier::expression &ex, double mut_p, unsigned depth)
     }
 }
 
-lambdifier::expression extract_random_subtree(const lambdifier::expression &ex, double cr_p)
+expression extract_random_subtree(const expression &ex, double cr_p)
 {
     if (rng01(gen) < cr_p) {
         return ex;
@@ -152,7 +152,7 @@ lambdifier::expression extract_random_subtree(const lambdifier::expression &ex, 
     return ex;
 }
 
-void inject_subtree(lambdifier::expression &ex, const lambdifier::expression &sub_ex, double cr_p)
+void inject_subtree(expression &ex, const expression &sub_ex, double cr_p)
 {
     if (rng01(gen) < cr_p) {
         ex = sub_ex;
@@ -167,7 +167,7 @@ void inject_subtree(lambdifier::expression &ex, const lambdifier::expression &su
     }
 }
 
-void crossover(lambdifier::expression &ex1, lambdifier::expression &ex2, double cr_p)
+void crossover(expression &ex1, expression &ex2, double cr_p)
 {
     auto sub_ex1 = extract_random_subtree(ex1, cr_p);
     auto sub_ex2 = extract_random_subtree(ex2, cr_p);

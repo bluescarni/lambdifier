@@ -31,6 +31,7 @@ public:
     expression &access_rhs();
     void set_lhs(expression);
     void set_rhs(expression);
+    char get_op() const {return op;};
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
