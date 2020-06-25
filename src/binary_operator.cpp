@@ -137,4 +137,19 @@ void binary_operator::evaluate(std::unordered_map<std::string, std::vector<doubl
 }
 
 
+expression binary_operator::diff(const std::string &s) const
+{
+    switch (op) {
+        case '+':
+            return lhs.diff(s) + rhs.diff(s);
+        case '-':
+            return lhs.diff(s) - rhs.diff(s);
+        case '*':
+            return lhs.diff(s) * rhs + lhs * rhs.diff(s);
+        default:
+            assert(op == '/');
+            return (lhs.diff(s) * rhs - lhs * rhs.diff(s)) / (rhs * rhs);
+    }
+}
+
 } // namespace lambdifier

@@ -1,15 +1,15 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <unordered_map>
-
+#include <utility>
 
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
+#include <lambdifier/number.hpp>
 #include <lambdifier/variable.hpp>
 
 namespace lambdifier
@@ -44,19 +44,29 @@ std::string variable::to_string() const
     return name;
 }
 
-double variable::evaluate(std::unordered_map<std::string, double> &in) const {
+double variable::evaluate(std::unordered_map<std::string, double> &in) const
+{
     return in[name];
 }
 
-void variable::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const {
+void variable::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
     // we need to distinguish these cases as at this level as to avoid to create an empty map.
     if (in.find(name) != in.end()) {
-        out =  in[name];
+        out = in[name];
     } else {
         out = std::vector<double>(out.size(), 0.);
     }
 }
 
+expression variable::diff(const std::string &s) const
+{
+    if (s == name) {
+        return expression{number{1}};
+    } else {
+        return expression{number{0}};
+    }
+}
 
 void variable::set_name(std::string s)
 {

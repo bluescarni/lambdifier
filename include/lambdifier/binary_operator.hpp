@@ -37,6 +37,7 @@ public:
     std::string to_string() const;
     double evaluate(std::unordered_map<std::string, double> &) const;
     void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+    expression diff(const std::string &) const;
 };
 
 } // namespace lambdifier

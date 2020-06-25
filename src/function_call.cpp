@@ -66,6 +66,10 @@ function_call::eval_batch_t function_call::get_eval_batch_f() const
 {
     return eval_batch_f;
 }
+function_call::diff_t function_call::get_diff_f() const
+{
+    return diff_f;
+}
 
 // Setters.
 void function_call::set_name(std::string s)
@@ -111,6 +115,10 @@ void function_call::set_eval_f(eval_t f)
 void function_call::set_eval_batch_f(eval_batch_t f)
 {
     eval_batch_f = std::move(f);
+}
+void function_call::set_diff_f(diff_t f)
+{
+    diff_f = std::move(f);
 }
 
 llvm::Value *function_call::codegen(llvm_state &s) const
@@ -237,12 +245,21 @@ double function_call::evaluate(std::unordered_map<std::string, double> &in) cons
     }
 }
 
-void function_call::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const {
+void function_call::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
     if (eval_f) {
         eval_batch_f(args, in, out);
     } else {
         // TODO
         throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
+    }
+}
+expression function_call::diff(const std::string &s) const
+{
+    if (diff_f) {
+        return diff_f(args, s);
+    } else {
+        throw std::runtime_error("No diff implemented for the function call '" + to_string() + "'");
     }
 }
 

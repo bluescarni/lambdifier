@@ -52,6 +52,10 @@ void expression::operator()(std::unordered_map<std::string, std::vector<double>>
 {
     return m_ptr->evaluate(in, out);
 }
+expression expression::diff(const std::string &s) const
+{
+    return m_ptr->diff(s);
+}
 
 std::vector<std::string> expression::get_variables() const
 {

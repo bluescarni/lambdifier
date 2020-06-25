@@ -1,7 +1,6 @@
 #include <string>
 #include <unordered_map>
 
-
 #include <llvm/ADT/APFloat.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Value.h>
@@ -40,8 +39,13 @@ double number::evaluate(std::unordered_map<std::string, double> &) const
     return value;
 }
 
-void number::evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &out) const {
-        out = std::vector<double>(out.size(), value);
+void number::evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &out) const
+{
+    out = std::vector<double>(out.size(), value);
+}
+expression number::diff(const std::string &) const
+{
+    return expression{number{0}};
 }
 
 void number::set_value(double x)
