@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -42,6 +43,10 @@ const std::vector<expression> &function_call::get_args() const
     return args;
 }
 
+std::vector<expression> &function_call::access_args()
+{
+    return args;
+}
 const std::vector<llvm::Attribute::AttrKind> &function_call::get_attributes() const
 {
     return attributes;
@@ -52,6 +57,15 @@ function_call::type function_call::get_type() const
     return ty;
 }
 
+function_call::eval_t function_call::get_eval_f() const
+{
+    return eval_f;
+}
+
+function_call::eval_batch_t function_call::get_eval_batch_f() const
+{
+    return eval_batch_f;
+}
 function_call::diff_t function_call::get_diff_f() const
 {
     return diff_f;
@@ -93,6 +107,15 @@ void function_call::set_type(type t)
     }
 }
 
+void function_call::set_eval_f(eval_t f)
+{
+    eval_f = std::move(f);
+}
+
+void function_call::set_eval_batch_f(eval_batch_t f)
+{
+    eval_batch_f = std::move(f);
+}
 void function_call::set_diff_f(diff_t f)
 {
     diff_f = std::move(f);
@@ -212,6 +235,25 @@ std::string function_call::to_string() const
     return retval;
 }
 
+double function_call::evaluate(std::unordered_map<std::string, double> &in) const
+{
+    if (eval_f) {
+        return eval_f(args, in);
+    } else {
+        // TODO
+        throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
+    }
+}
+
+void function_call::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
+    if (eval_f) {
+        eval_batch_f(args, in, out);
+    } else {
+        // TODO
+        throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
+    }
+}
 expression function_call::diff(const std::string &s) const
 {
     if (diff_f) {

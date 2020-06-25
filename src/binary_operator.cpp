@@ -1,6 +1,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <llvm/IR/Value.h>
@@ -31,6 +32,16 @@ const expression &binary_operator::get_lhs() const
 }
 
 const expression &binary_operator::get_rhs() const
+{
+    return rhs;
+}
+
+expression &binary_operator::access_lhs()
+{
+    return lhs;
+}
+
+expression &binary_operator::access_rhs()
 {
     return rhs;
 }
@@ -70,6 +81,61 @@ std::string binary_operator::to_string() const
 {
     return "(" + lhs.to_string() + " " + op + " " + rhs.to_string() + ")";
 }
+
+double binary_operator::evaluate(std::unordered_map<std::string, double> &in) const
+{
+    switch (op) {
+        case '+':
+            return lhs(in) + rhs(in);
+        case '-':
+            return lhs(in) - rhs(in);
+        case '*':
+            return lhs(in) * rhs(in);
+        default:
+            assert(op == '/');
+            return lhs(in) / rhs(in);
+    }
+}
+
+void binary_operator::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
+    switch (op) {
+        case '+':
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::plus<double>());
+            break;
+        }
+        case '-':
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::minus<double>());
+            break;
+        }
+        case '*':
+        {
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::multiplies<double>());
+            break;
+        }
+        default:
+        {
+            assert(op == '/');
+            auto tmp = out;
+            lhs(in, out);
+            rhs(in, tmp);
+            std::transform(out.begin(), out.end(), tmp.begin(), out.begin(), std::divides<double>());
+            break;
+        }
+    }
+}
+
 
 expression binary_operator::diff(const std::string &s) const
 {

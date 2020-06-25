@@ -1,7 +1,9 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <llvm/IR/Value.h>
 
@@ -41,6 +43,21 @@ std::string variable::get_name() const
 std::string variable::to_string() const
 {
     return name;
+}
+
+double variable::evaluate(std::unordered_map<std::string, double> &in) const
+{
+    return in[name];
+}
+
+void variable::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
+    // we need to distinguish these cases as at this level as to avoid to create an empty map.
+    if (in.find(name) != in.end()) {
+        out = in[name];
+    } else {
+        out = std::vector<double>(out.size(), 0.);
+    }
 }
 
 expression variable::diff(const std::string &s) const

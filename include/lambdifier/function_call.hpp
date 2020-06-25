@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <llvm/IR/Attributes.h>
@@ -19,7 +20,10 @@ class LAMBDIFIER_DLL_PUBLIC function_call
 {
 public:
     bool disable_verify = false;
-
+    using eval_t = std::function<double(const std::vector<expression> &, std::unordered_map<std::string, double> &)>;
+    using eval_batch_t
+        = std::function<void(const std::vector<expression> &, std::unordered_map<std::string, std::vector<double>> &,
+                             std::vector<double> &)>;
     enum class type { internal, external, builtin };
 
     using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
@@ -29,6 +33,8 @@ private:
     std::vector<expression> args;
     std::vector<llvm::Attribute::AttrKind> attributes;
     type ty = type::internal;
+    eval_t eval_f;
+    eval_batch_t eval_batch_f;
     diff_t diff_f;
 
 public:
@@ -41,8 +47,12 @@ public:
     const std::string &get_name() const;
     const std::string &get_display_name() const;
     const std::vector<expression> &get_args() const;
+    std::vector<expression> &access_args();
+
     const std::vector<llvm::Attribute::AttrKind> &get_attributes() const;
     type get_type() const;
+    eval_t get_eval_f() const;
+    eval_batch_t get_eval_batch_f() const;
     bool get_disable_verify();
     diff_t get_diff_f() const;
 
@@ -52,12 +62,18 @@ public:
     void set_args(std::vector<expression>);
     void set_attributes(std::vector<llvm::Attribute::AttrKind>);
     void set_type(type);
+    void set_eval_f(eval_t);
+    void set_eval_batch_f(eval_batch_t);
     void set_disable_verify(bool);
     void set_diff_f(diff_t);
 
     // Expression interface.
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+
+    double evaluate(std::unordered_map<std::string, double> &) const;
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+
     expression diff(const std::string &) const;
 };
 

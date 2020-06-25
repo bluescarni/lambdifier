@@ -2,6 +2,8 @@
 #define LAMBDIFIER_NUMBER_HPP
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <llvm/IR/Value.h>
 
@@ -27,6 +29,9 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+    double evaluate(std::unordered_map<std::string, double> &) const;
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+
     expression diff(const std::string &) const;
 };
 

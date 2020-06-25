@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -42,6 +43,15 @@ std::string expression::to_string() const
     return m_ptr->to_string();
 }
 
+double expression::operator()(std::unordered_map<std::string, double> &in) const
+{
+    return m_ptr->evaluate(in);
+}
+
+void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
+{
+    return m_ptr->evaluate(in, out);
+}
 expression expression::diff(const std::string &s) const
 {
     return m_ptr->diff(s);

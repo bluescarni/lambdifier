@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -28,6 +29,8 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual std::unique_ptr<expr_inner_base> clone() const = 0;
     virtual llvm::Value *codegen(llvm_state &) const = 0;
     virtual std::string to_string() const = 0;
+    virtual double evaluate(std::unordered_map<std::string, double> &) const = 0;
+    virtual void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const = 0;
     virtual expression diff(const std::string &) const = 0;
 };
 
@@ -57,6 +60,16 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
     std::string to_string() const final
     {
         return m_value.to_string();
+    }
+
+    double evaluate(std::unordered_map<std::string, double> &in) const final
+    {
+        return m_value.evaluate(in);
+    }
+
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const final
+    {
+        m_value.evaluate(in, out);
     }
 
     expression diff(const std::string &) const final;
@@ -92,6 +105,9 @@ public:
 
     expression(const expression &);
     expression(expression &&) noexcept;
+    // Call operators on double. Normal and batch version
+    double operator()(std::unordered_map<std::string, double> &) const;
+    void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double>&) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;
@@ -121,6 +137,13 @@ public:
     const T *extract() const noexcept
     {
         auto p = dynamic_cast<const detail::expr_inner<T> *>(ptr());
+        return p == nullptr ? nullptr : &(p->m_value);
+    }
+
+    template <typename T>
+    T *extract() noexcept
+    {
+        auto p = dynamic_cast<detail::expr_inner<T> *>(ptr());
         return p == nullptr ? nullptr : &(p->m_value);
     }
 

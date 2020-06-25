@@ -1,7 +1,11 @@
 #ifndef LAMBDIFIER_BINARY_OPERATOR_HPP
 #define LAMBDIFIER_BINARY_OPERATOR_HPP
 
+#include <algorithm>
+#include <functional>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <llvm/IR/Value.h>
 
@@ -26,11 +30,19 @@ public:
     // Getters/setters.
     const expression &get_lhs() const;
     const expression &get_rhs() const;
+    expression &access_lhs();
+    expression &access_rhs();
     void set_lhs(expression);
     void set_rhs(expression);
+    char get_op() const
+    {
+        return op;
+    };
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+    double evaluate(std::unordered_map<std::string, double> &) const;
+    void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
     expression diff(const std::string &) const;
 };
 
