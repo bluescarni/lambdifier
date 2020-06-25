@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instruction.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
@@ -41,6 +43,9 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
     LAMBDIFIER_DLL_LOCAL void add_batch_expression(const std::string &, const std::vector<std::string> &, unsigned);
     LAMBDIFIER_DLL_LOCAL void verify_function(llvm::Function *);
     std::uintptr_t jit_lookup(const std::string &);
+    LAMBDIFIER_DLL_LOCAL void add_llvm_inst_to_value_exp_map(std::unordered_map<const llvm::Value *, expression> &,
+                                                             const llvm::Instruction &,
+                                                             std::optional<expression> &) const;
 
 public:
     explicit llvm_state(const std::string &, unsigned = 3);
