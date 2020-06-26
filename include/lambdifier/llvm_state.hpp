@@ -57,7 +57,7 @@ public:
 
     ~llvm_state();
 
-    void add_expression(const std::string &, const expression &, unsigned = 0u);
+    void add_expression(const std::string &, const expression &, unsigned = 0);
 
     llvm::LLVMContext &get_context();
     llvm::IRBuilder<> &get_builder();

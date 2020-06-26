@@ -107,7 +107,7 @@ public:
     expression(expression &&) noexcept;
     // Call operators on double. Normal and batch version
     double operator()(std::unordered_map<std::string, double> &) const;
-    void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double>&) const;
+    void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;
