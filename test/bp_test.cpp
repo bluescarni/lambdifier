@@ -17,29 +17,29 @@ using namespace lambdifier;
 // The node ids get assigned on the fly by the order of visit (left->right .. args[0]->args[n]), hence node_id is passed
 // by ref. The root call has to be done with a node_id = 0.
 
-void fill_connections(const expression &ex, std::vector<std::vector<double>> &node_connections, unsigned &node_id)
+void fill_connections(const expression &ex, std::vector<std::vector<unsigned>> &node_connections, unsigned &node_id)
 {
     const unsigned node_id_copy = node_id;
     node_id++;
     if (auto bo_ptr = ex.extract<binary_operator>()) {
-        node_connections.push_back(std::vector<double>(2));
+        node_connections.push_back(std::vector<unsigned>(2));
         node_connections[node_id_copy][0] = node_id;
         fill_connections(bo_ptr->get_lhs(), node_connections, node_id);
         node_connections[node_id_copy][1] = node_id;
         fill_connections(bo_ptr->get_rhs(), node_connections, node_id);
     } else if (auto call_ptr = ex.extract<function_call>()) {
-        node_connections.push_back(std::vector<double>(call_ptr->get_args().size()));
+        node_connections.push_back(std::vector<unsigned>(call_ptr->get_args().size()));
         for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
             node_connections[node_id_copy][i] = node_id;
             fill_connections(call_ptr->get_args()[i], node_connections, node_id);
         }
     } else {
-        node_connections.push_back(std::vector<double>());
+        node_connections.push_back(std::vector<unsigned>());
     }
 }
 
 void forward_pass(const expression &ex, std::vector<double> &node_values,
-                  const std::vector<std::vector<double>> &node_connections, std::unordered_map<std::string, double> &in,
+                  const std::vector<std::vector<unsigned>> &node_connections, std::unordered_map<std::string, double> &in,
                   unsigned &node_id)
 {
     // In the forward pass we fill in the output value of each tree node.
@@ -67,7 +67,7 @@ void forward_pass(const expression &ex, std::vector<double> &node_values,
                 break;
 
             default:
-                assert(op == '/');
+                assert(bo_ptr->get_op() == '/');
                 node_values[node_id_curr]
                     = node_values[node_connections[node_id_curr][0]] / node_values[node_connections[node_id_curr][1]];
                 break;
@@ -90,7 +90,7 @@ void forward_pass(const expression &ex, std::vector<double> &node_values,
 }
 
 void backward_pass(const expression &ex, const std::vector<double> &node_values,
-                   const std::vector<std::vector<double>> &node_connections,
+                   const std::vector<std::vector<unsigned>> &node_connections,
                    std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &gradient,
                    unsigned &node_id, double acc = 1.)
 {
@@ -177,7 +177,7 @@ int main()
     // expression ex = "x"_var * "y"_var / "y"_var + "y"_var * "x"_var;
     expression ex = sin("x"_var * "y"_var) / "y"_var + cos(sin("x"_var / "y"_var) - "x"_var);
 
-    std::vector<std::vector<double>> node_connections;
+    std::vector<std::vector<unsigned>> node_connections;
     std::unordered_map<std::string, double> in;
     in["x"] = 3.2;
     in["y"] = -0.3;
