@@ -67,7 +67,6 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
                 break;
             }
             default: {
-                assert(op == '/');
                 // lhs (a/b -> 1/b)
                 backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1,
                               acc / node_values[node_connections[node_id][1]]);
