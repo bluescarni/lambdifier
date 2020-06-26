@@ -73,17 +73,14 @@ void forward_pass(const expression &ex, std::vector<double> &node_values,
                 break;
         }
     } else if (auto call_ptr = ex.extract<function_call>()) {
-        // Here we need to compute the output value of the node calling eval_f on the input values.
-        std::unordered_map<std::string, double> dummy_in_values;
-        std::vector<expression> dummy_in_symbols;
-        for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+         for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
             forward_pass(call_ptr->get_args()[i], node_values, node_connections, in, node_id);
         }
-        for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
-            dummy_in_values["x" + std::to_string(i)] = node_values[node_connections[node_id_curr][i]];
-            dummy_in_symbols.emplace_back(variable("x" + std::to_string(i)));
+         std::vector<double> in_values(call_ptr->get_args().size());
+         for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+            in_values[i] = node_values[node_connections[node_id_curr][i]];
         }
-        node_values[node_id_curr] = call_ptr->get_eval_f()(dummy_in_symbols, dummy_in_values);
+         node_values[node_id_curr] = call_ptr->evaluate_num(in_values);
     } else if (auto var_ptr = ex.extract<variable>()) {
         node_values[node_id_curr] = in[var_ptr->get_name()];
     } else if (auto num_ptr = ex.extract<number>()) {
@@ -95,13 +92,15 @@ void forward_pass(const expression &ex, std::vector<double> &node_values,
 void backward_pass(const expression &ex, const std::vector<double> &node_values,
                    const std::vector<std::vector<double>> &node_connections,
                    std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &gradient,
-                   unsigned node_id, double acc = 1.)
+                   unsigned &node_id, double acc = 1.)
 {
     // In the backward pass we simply apply the composition rule from
     // the root node, accumulating the value up to the leaves which will then contain (say) dN0/dx = dN0/dN4 * dN4/dN7 *
     // dN7/dx each variable leaf is treated as an independent variable and then the derivative accumulated in the
     // correct gradient position.
-
+    unsigned node_id_curr = node_id;
+    std::cout << node_id << ": " << acc << std::endl;
+    node_id++;
     // Variable
     if (auto var_ptr = ex.extract<variable>()) {
         gradient[var_ptr->get_name()] = gradient[var_ptr->get_name()] + acc;
@@ -111,55 +110,64 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
         switch (bo_ptr->get_op()) {
             case '+': {
                 // lhs (a + b -> a)
-                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id, acc);
                 // rhs (a + b -> b)
-                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id, acc);
                 break;
             }
             case '-': {
                 // lhs (a - b -> a)
-                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1, acc);
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id, acc);
                 // rhs (a - b -> -b)
-                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1, -acc);
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id, -acc);
                 break;
             }
             case '*': {
                 // lhs (a*b -> b)
-                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1,
-                              acc * node_values[node_connections[node_id][1]]);
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id,
+                              acc * node_values[node_connections[node_id_curr][1]]);
                 // rhs (a*b -> a)
-                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1,
-                              acc * node_values[node_connections[node_id][0]]);
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id,
+                              acc * node_values[node_connections[node_id_curr][0]]);
                 break;
             }
             default: {
                 assert(op == '/');
                 // lhs (a/b -> 1/b)
-                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id + 1,
-                              acc / node_values[node_connections[node_id][1]]);
+                backward_pass(bo_ptr->get_lhs(), node_values, node_connections, in, gradient, node_id,
+                              acc / node_values[node_connections[node_id_curr][1]]);
                 // rhs (a/b -> -a/b^2)
-                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id + 1,
-                              -acc * node_values[node_connections[node_id][0]]
-                                  / node_values[node_connections[node_id][1]]
-                                  / node_values[node_connections[node_id][1]]);
+                backward_pass(bo_ptr->get_rhs(), node_values, node_connections, in, gradient, node_id,
+                              -acc * node_values[node_connections[node_id_curr][0]]
+                                  / node_values[node_connections[node_id_curr][1]]
+                                  / node_values[node_connections[node_id_curr][1]]);
                 break;
             }
         }
     }
     // Function call TODO include multiargs
     if (auto call_ptr = ex.extract<function_call>()) {
+         std::vector<double> in_values(call_ptr->get_args().size());
+         for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+            in_values[i] = node_values[node_connections[node_id_curr][i]];
+        }
+        for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+            auto value = call_ptr->devaluate_num(in_values, i);
+            backward_pass(call_ptr->get_args()[0], node_values, node_connections, in, gradient, node_id, acc * value);
+        }
+
+
         // Here we need to compute the output value of the node calling eval_f on the input values.
-        std::unordered_map<std::string, double> dummy_in_values;
-        std::vector<expression> dummy_in_symbols;
-        for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
-            dummy_in_values["x" + std::to_string(i)] = node_values[node_connections[node_id][i]];
-            dummy_in_symbols.emplace_back(variable("x" + std::to_string(i)));
-        }
-        for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
-            auto value = call_ptr->get_diff_f()(dummy_in_symbols, "x" + std::to_string(i))(dummy_in_values);
-            backward_pass(call_ptr->get_args()[0], node_values, node_connections, in, gradient, node_id + 1,
-                          acc * value);
-        }
+        //std::unordered_map<std::string, double> dummy_in_values;
+        //std::vector<expression> dummy_in_symbols;
+        //for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+        //    dummy_in_values["x" + std::to_string(i)] = node_values[node_connections[node_id_curr][i]];
+        //    dummy_in_symbols.emplace_back(variable("x" + std::to_string(i)));
+        //}
+        //for (auto i = 0u; i < call_ptr->get_args().size(); ++i) {
+        //    auto value = call_ptr->get_diff_f()(dummy_in_symbols, "x" + std::to_string(i))(dummy_in_values);
+        //    backward_pass(call_ptr->get_args()[0], node_values, node_connections, in, gradient, node_id, acc * value);
+        //}
     }
 }
 
@@ -167,7 +175,9 @@ void backward_pass(const expression &ex, const std::vector<double> &node_values,
 using namespace std::chrono;
 int main()
 {
-    expression ex = sin("x"_var * "y"_var) / "y"_var;
+    // expression ex = "x"_var * "y"_var / "y"_var + "y"_var * "x"_var;
+    expression ex = sin("x"_var * "y"_var) / "y"_var + cos(sin("x"_var / "y"_var) - "x"_var);
+
     std::vector<std::vector<double>> node_connections;
     std::unordered_map<std::string, double> in;
     in["x"] = 3.2;
@@ -187,9 +197,10 @@ int main()
         std::cout << "\n";
     }
     std::unordered_map<std::string, double> gradient;
-    backward_pass(ex, node_values, node_connections, in, gradient, 0);
-    std::cout << gradient["x"] << std::endl;
-    std::cout << gradient["y"] << std::endl;
+    node_id = 0;
 
+    backward_pass(ex, node_values, node_connections, in, gradient, node_id);
+    std::cout << gradient["x"] << " " << ex.diff("x")(in) << std::endl;
+    std::cout << gradient["y"] << " " << ex.diff("y")(in) << std::endl;
     return 0;
 }

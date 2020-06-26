@@ -66,6 +66,14 @@ function_call::eval_batch_t function_call::get_eval_batch_f() const
 {
     return eval_batch_f;
 }
+function_call::eval_num_t function_call::get_eval_num_f() const
+{
+    return eval_num_f;
+}
+function_call::deval_num_t function_call::get_deval_num_f() const
+{
+    return deval_num_f;
+}
 function_call::diff_t function_call::get_diff_f() const
 {
     return diff_f;
@@ -115,6 +123,14 @@ void function_call::set_eval_f(eval_t f)
 void function_call::set_eval_batch_f(eval_batch_t f)
 {
     eval_batch_f = std::move(f);
+}
+void function_call::set_eval_num_f(eval_num_t f)
+{
+    eval_num_f = std::move(f);
+}
+void function_call::set_deval_num_f(deval_num_t f)
+{
+    deval_num_f = std::move(f);
 }
 void function_call::set_diff_f(diff_t f)
 {
@@ -252,6 +268,24 @@ void function_call::evaluate(std::unordered_map<std::string, std::vector<double>
     } else {
         // TODO
         throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
+    }
+}
+double function_call::evaluate_num(std::vector<double> &in) const
+{
+    if (eval_num_f) {
+        return eval_num_f(in);
+    } else {
+        // TODO
+        throw std::runtime_error("No evaluate_num implemented for this function call: " + display_name);
+    }
+}
+double function_call::devaluate_num(std::vector<double> &in, unsigned n) const
+{
+    if (deval_num_f) {
+        return deval_num_f(in, n);
+    } else {
+        // TODO
+        throw std::runtime_error("No devaluate_num implemented for this function call: " + display_name);
     }
 }
 expression function_call::diff(const std::string &s) const

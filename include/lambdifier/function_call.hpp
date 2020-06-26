@@ -24,6 +24,8 @@ public:
     using eval_batch_t
         = std::function<void(const std::vector<expression> &, std::unordered_map<std::string, std::vector<double>> &,
                              std::vector<double> &)>;
+    using eval_num_t = std::function<double(const std::vector<double> &)>;
+    using deval_num_t = std::function<double(const std::vector<double> &, unsigned)>;
     enum class type { internal, external, builtin };
 
     using diff_t = std::function<expression(const std::vector<expression> &, const std::string &)>;
@@ -35,6 +37,9 @@ private:
     type ty = type::internal;
     eval_t eval_f;
     eval_batch_t eval_batch_f;
+    eval_num_t eval_num_f;
+    deval_num_t deval_num_f;
+
     diff_t diff_f;
 
 public:
@@ -53,6 +58,8 @@ public:
     type get_type() const;
     eval_t get_eval_f() const;
     eval_batch_t get_eval_batch_f() const;
+    eval_num_t get_eval_num_f() const;
+    deval_num_t get_deval_num_f() const;
     bool get_disable_verify();
     diff_t get_diff_f() const;
 
@@ -64,6 +71,8 @@ public:
     void set_type(type);
     void set_eval_f(eval_t);
     void set_eval_batch_f(eval_batch_t);
+    void set_eval_num_f(eval_num_t);
+    void set_deval_num_f(deval_num_t);
     void set_disable_verify(bool);
     void set_diff_f(diff_t);
 
@@ -73,6 +82,8 @@ public:
 
     double evaluate(std::unordered_map<std::string, double> &) const;
     void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+    double evaluate_num(std::vector<double> &) const;
+    double devaluate_num(std::vector<double> &, unsigned) const;
 
     expression diff(const std::string &) const;
 };
