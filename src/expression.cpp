@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <locale>
 #include <ostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -205,6 +208,176 @@ expression operator-(expression e)
 std::ostream &operator<<(std::ostream &os, const expression &e)
 {
     return os << e.to_string();
+}
+
+namespace detail
+{
+
+namespace
+{
+
+// Locale-independent to_string()/from_string() implementation. See:
+// https://stackoverflow.com/questions/1333451/locale-independent-atof
+template <typename T>
+std::string li_to_string(const T &x)
+{
+    std::ostringstream oss;
+    oss.imbue(std::locale("C"));
+    oss << x;
+    return oss.str();
+}
+
+template <typename T>
+T li_from_string(const std::string &s)
+{
+    T out(0);
+    std::istringstream iss(s);
+    iss.imbue(std::locale("C"));
+    iss >> out;
+    return out;
+}
+
+void rename_ex_variables(expression &ex, const std::unordered_map<std::string, std::string> &repl_map)
+{
+    if (auto bo_ptr = ex.extract<binary_operator>()) {
+        rename_ex_variables(bo_ptr->access_lhs(), repl_map);
+        rename_ex_variables(bo_ptr->access_rhs(), repl_map);
+    } else if (auto var_ptr = ex.extract<variable>()) {
+        if (auto it = repl_map.find(var_ptr->get_name()); it != repl_map.end()) {
+            var_ptr->set_name(it->second);
+        }
+    } else if (auto call_ptr = ex.extract<function_call>()) {
+        for (auto &arg_ex : call_ptr->access_args()) {
+            rename_ex_variables(arg_ex, repl_map);
+        }
+    }
+    // TODO: should we error out here?
+}
+
+// Transform in-place ex by decomposition, appending the
+// result of the decomposition to u_vars_defs.
+// NOTE: this will render ex unusable.
+void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
+{
+    if (ex.extract<variable>() != nullptr || ex.extract<number>() != nullptr) {
+        // NOTE: an expression does *not* require decomposition
+        // if it is a variable or a number.
+        return;
+    } else if (auto bo_ptr = ex.extract<binary_operator>()) {
+        // Variables to track how the size
+        // of u_vars_defs changes after the decomposition
+        // of lhs and rhs.
+        auto old_size = u_vars_defs.size(), new_size = old_size;
+
+        // We decompose the lhs, and we check if the
+        // decomposition added new elements to u_vars_defs.
+        // If it did, then it means that the lhs required
+        // further decompositions and the creation of new
+        // u vars: the new lhs will become the last added
+        // u variable. If it did not, it means that the lhs
+        // was a variable or a number (see above), and thus
+        // we can use it as-is.
+        decompose_ex(bo_ptr->access_lhs(), u_vars_defs);
+        new_size = u_vars_defs.size();
+        if (new_size > old_size) {
+            bo_ptr->access_lhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
+        }
+        old_size = new_size;
+
+        // Same for the rhs.
+        decompose_ex(bo_ptr->access_rhs(), u_vars_defs);
+        new_size = u_vars_defs.size();
+        if (new_size > old_size) {
+            bo_ptr->access_rhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
+        }
+
+        u_vars_defs.emplace_back(std::move(*bo_ptr));
+    } else if (auto func_ptr = ex.extract<function_call>()) {
+        // The function call treatment is a generalization
+        // of the binary operator.
+        auto old_size = u_vars_defs.size(), new_size = old_size;
+
+        for (auto &arg : func_ptr->access_args()) {
+            decompose_ex(arg, u_vars_defs);
+            new_size = u_vars_defs.size();
+            if (new_size > old_size) {
+                arg = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
+            }
+            old_size = new_size;
+        }
+
+        u_vars_defs.emplace_back(std::move(*func_ptr));
+    }
+    // TODO: should we error out here?
+}
+
+} // namespace
+
+} // namespace detail
+
+std::vector<expression> decompose(std::vector<expression> v_ex)
+{
+    // Determine the variables in the system of equations.
+    std::vector<std::string> vars;
+    for (const auto &ex : v_ex) {
+        const auto ex_vars = ex.get_variables();
+        vars.insert(vars.end(), ex_vars.begin(), ex_vars.end());
+        std::sort(vars.begin(), vars.end());
+        vars.erase(std::unique(vars.begin(), vars.end()), vars.end());
+    }
+
+    if (vars.size() != v_ex.size()) {
+        throw std::invalid_argument("The number of variables (" + std::to_string(vars.size())
+                                    + ") differs from the number of equations (" + std::to_string(v_ex.size()) + ")");
+    }
+
+    // Create the map for renaming the variables to u_i.
+    std::unordered_map<std::string, std::string> repl_map;
+    for (decltype(vars.size()) i = 0; i < vars.size(); ++i) {
+        repl_map.emplace(vars[i], "u_" + detail::li_to_string(i));
+    }
+
+    // Rename the variables in the original equations..
+    for (auto &ex : v_ex) {
+        detail::rename_ex_variables(ex, repl_map);
+    }
+
+    // Init the vector containing the definitions
+    // of the u variables. It initially contains
+    // just the variables of the system.
+    std::vector<expression> u_vars_defs;
+    for (const auto &var : vars) {
+        u_vars_defs.emplace_back(variable{var});
+    }
+
+    // Create a copy of the original equations in terms of u variables.
+    // We will be reusing this below.
+    auto v_ex_copy = v_ex;
+
+    // Decompose the equations.
+    for (decltype(v_ex.size()) i = 0; i < v_ex.size(); ++i) {
+        const auto orig_size = u_vars_defs.size();
+        detail::decompose_ex(v_ex[i], u_vars_defs);
+        if (u_vars_defs.size() != orig_size) {
+            // NOTE: if the size of u_vars_defs changes,
+            // it means we had to decompose v_ex[i]. In such
+            // case, we replace the original definition of the
+            // expression with its definition in terms of the
+            // last u variable added in the decomposition.
+            // In the other case, v_ex_copy will keep on containing
+            // the original definition of v_ex[i] in terms
+            // of u variables.
+            v_ex_copy[i] = expression{variable{"u_" + detail::li_to_string(u_vars_defs.size() - 1u)}};
+        }
+    }
+
+    // Append the (possibly new) definitions of the diff equations
+    // in terms of u variables.
+    for (auto &ex : v_ex_copy) {
+        u_vars_defs.emplace_back(std::move(ex));
+    }
+
+    return u_vars_defs;
 }
 
 } // namespace lambdifier

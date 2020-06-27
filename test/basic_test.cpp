@@ -17,6 +17,12 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
+    for (const auto &ex : lambdifier::decompose({0_num, (1_num - x * x) * y - x})) {
+        std::cout << ex << '\n';
+    }
+
+    return 0;
+
     auto ex = sin(x) * cos(x);
     std::cout << ex << '\n';
 
