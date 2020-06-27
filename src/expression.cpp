@@ -1,7 +1,5 @@
 #include <algorithm>
-#include <locale>
 #include <ostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -11,6 +9,7 @@
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/binary_operator.hpp>
+#include <lambdifier/detail/string_conv.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -166,13 +165,14 @@ expression operator/(expression e1, expression e2)
         } else if (e2_nptr->get_value() == -1) {
             // symbolic / -1 = -symbolic.
             return -std::move(e1);
+        } else {
+            // symbolic / x = symbolic * 1/x.
+            return std::move(e1) * expression{number{1 / e2_nptr->get_value()}};
         }
-        // NOTE: if we get here, it means that e1 is symbolic and e2 is a
-        // number different from -1 or 1. We will fall through
-        // the standard case.
+    } else {
+        // The standard case.
+        return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
     }
-    // The standard case.
-    return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 
 expression &operator+=(expression &x, expression e)
@@ -215,27 +215,6 @@ namespace detail
 
 namespace
 {
-
-// Locale-independent to_string()/from_string() implementation. See:
-// https://stackoverflow.com/questions/1333451/locale-independent-atof
-template <typename T>
-std::string li_to_string(const T &x)
-{
-    std::ostringstream oss;
-    oss.imbue(std::locale("C"));
-    oss << x;
-    return oss.str();
-}
-
-template <typename T>
-T li_from_string(const std::string &s)
-{
-    T out(0);
-    std::istringstream iss(s);
-    iss.imbue(std::locale("C"));
-    iss >> out;
-    return out;
-}
 
 void rename_ex_variables(expression &ex, const std::unordered_map<std::string, std::string> &repl_map)
 {
