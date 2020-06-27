@@ -188,6 +188,21 @@ int main()
     };
     // Uncomment for simpler expression.
     // ex = "x"_var * "x"_var + "y"_var + "y"_var * "y"_var - "y"_var * "x"_var;
+    ex = (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+              * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+          + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+             * (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                    * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+         - (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+            + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+               / (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                      * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                  + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+         + cos((sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                    * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})));
     std::cout << "ex: " << ex << "\n";
     s.add_expression("f", ex, 10000);
     s.add_expression("g", ex, 20);
@@ -204,7 +219,7 @@ int main()
     unsigned N = 10000u;
     double res;
     auto func = s.fetch("f");
-    auto args_vv = random_args_vv(N, 2u);
+    auto args_vv = random_args_vv(N, 3u);
     start = high_resolution_clock::now();
     for (auto &args : args_vv) {
         res = func(args.data());

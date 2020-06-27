@@ -113,6 +113,7 @@ set(LAMBDIFIER_SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/variable.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/function_call.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/math_functions.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/autodiff.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/jit.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/check_symbol_name.cpp"
 )
