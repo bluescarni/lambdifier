@@ -316,7 +316,12 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     const auto n_eq = sys.size();
 
     // Decompose the system of equations.
-    const auto dc = decompose(std::move(sys));
+    const auto dc = taylor_decompose(std::move(sys));
+
+    std::cout << "Decomposition:\n";
+    for (const auto &ex : dc) {
+        std::cout << ex << '\n';
+    }
 
     // Compute the number of u variables.
     assert(dc.size() > n_eq);

@@ -211,7 +211,7 @@ inline expression expr_inner<T>::diff(const std::string &s) const
 
 } // namespace detail
 
-LAMBDIFIER_DLL_PUBLIC std::vector<expression> decompose(std::vector<expression> v);
+LAMBDIFIER_DLL_PUBLIC std::vector<expression> taylor_decompose(std::vector<expression> v);
 
 } // namespace lambdifier
 

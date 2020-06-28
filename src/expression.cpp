@@ -236,7 +236,7 @@ void rename_ex_variables(expression &ex, const std::unordered_map<std::string, s
 // Transform in-place ex by decomposition, appending the
 // result of the decomposition to u_vars_defs.
 // NOTE: this will render ex unusable.
-void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
+void taylor_decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
 {
     if (ex.extract<variable>() != nullptr || ex.extract<number>() != nullptr) {
         // NOTE: an expression does *not* require decomposition
@@ -256,7 +256,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         // u variable. If it did not, it means that the lhs
         // was a variable or a number (see above), and thus
         // we can use it as-is.
-        decompose_ex(bo_ptr->access_lhs(), u_vars_defs);
+        taylor_decompose_ex(bo_ptr->access_lhs(), u_vars_defs);
         new_size = u_vars_defs.size();
         if (new_size > old_size) {
             bo_ptr->access_lhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -264,7 +264,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         old_size = new_size;
 
         // Same for the rhs.
-        decompose_ex(bo_ptr->access_rhs(), u_vars_defs);
+        taylor_decompose_ex(bo_ptr->access_rhs(), u_vars_defs);
         new_size = u_vars_defs.size();
         if (new_size > old_size) {
             bo_ptr->access_rhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -277,7 +277,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         auto old_size = u_vars_defs.size(), new_size = old_size;
 
         for (auto &arg : func_ptr->access_args()) {
-            decompose_ex(arg, u_vars_defs);
+            taylor_decompose_ex(arg, u_vars_defs);
             new_size = u_vars_defs.size();
             if (new_size > old_size) {
                 arg = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -294,7 +294,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
 
 } // namespace detail
 
-std::vector<expression> decompose(std::vector<expression> v_ex)
+std::vector<expression> taylor_decompose(std::vector<expression> v_ex)
 {
     // Determine the variables in the system of equations.
     std::vector<std::string> vars;
@@ -336,7 +336,7 @@ std::vector<expression> decompose(std::vector<expression> v_ex)
     // Decompose the equations.
     for (decltype(v_ex.size()) i = 0; i < v_ex.size(); ++i) {
         const auto orig_size = u_vars_defs.size();
-        detail::decompose_ex(v_ex[i], u_vars_defs);
+        detail::taylor_decompose_ex(v_ex[i], u_vars_defs);
         if (u_vars_defs.size() != orig_size) {
             // NOTE: if the size of u_vars_defs changes,
             // it means we had to decompose v_ex[i]. In such

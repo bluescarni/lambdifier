@@ -33,7 +33,7 @@ int main()
 
     return 0;
 
-    for (const auto &ex : lambdifier::decompose({0_num, (1_num - x * x) * y - x})) {
+    for (const auto &ex : lambdifier::taylor_decompose({0_num, (1_num - x * x) * y - x})) {
         std::cout << ex << '\n';
     }
 
