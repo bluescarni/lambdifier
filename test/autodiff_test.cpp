@@ -65,7 +65,7 @@ TEST_CASE("gradient")
         std::unordered_map<std::string, double> point;
         point["x"] = 2.3;
         auto grad = gradient(ex, point, connections);
-        REQUIRE(grad["x"] == 1_a);
+        REQUIRE(grad["x"] == 1);
     }
     // We test that the gradient of x*y is {x, y}
     {

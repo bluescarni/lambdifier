@@ -43,21 +43,26 @@ int main()
     // Size of thest data.
     unsigned N = 10000u;
     // expression ex = "x"_var * "y"_var / "y"_var + "y"_var * "x"_var;
-    expression ex = (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                        * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                    + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})) * (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                        * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                    + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})) - (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                        * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                    + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})) / (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                        * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                    + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})) + cos((sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                        * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
-                    + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})));
+    expression ex
+        = (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+               * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+           + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+              * (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                     * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                 + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+          - (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                 * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+             + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+                / (sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                       * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                   + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}}))
+          + cos((sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                     * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
+                 + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})));
     auto node_connections = compute_connections(ex);
     auto args_vv = random_args_vv(N, 3u);
     auto args_vd = vv_to_vd(args_vv);
-
+std::cout << node_connections.size() << std::endl;
     // 1 - We time the autodiff
     auto start = high_resolution_clock::now();
     for (auto &args : args_vd) {
@@ -65,8 +70,8 @@ int main()
     }
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
-    std::cout << "Millions of gradients per second (reverse autodiff): "
-              << N / static_cast<double>(duration.count()) << "M\n";
+    std::cout << "Millions of gradients per second (reverse autodiff): " << N / static_cast<double>(duration.count())
+              << "M\n";
 
     // 2 - We time the symboilic differentiation plus evaluate
     start = high_resolution_clock::now();
