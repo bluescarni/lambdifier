@@ -17,6 +17,22 @@ int main()
     auto c = 42_num;
     auto x = "x"_var, y = "y"_var;
 
+    s.add_taylor("sbaffo", {y, (1_num - x * x) * y - x});
+
+    std::cout << s.dump() << '\n';
+
+    s.compile();
+
+    double state[] = {1, 2, 0, 0, 0, 0};
+
+    s.fetch_taylor("sbaffo")(state, 1.2, 4);
+
+    for (auto x : state) {
+        std::cout << x << '\n';
+    }
+
+    return 0;
+
     for (const auto &ex : lambdifier::decompose({0_num, (1_num - x * x) * y - x})) {
         std::cout << ex << '\n';
     }

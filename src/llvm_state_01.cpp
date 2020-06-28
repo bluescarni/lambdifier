@@ -1,23 +1,34 @@
 #include <cassert>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <llvm/IR/Attributes.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <lambdifier/detail/check_symbol_name.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
 #include <lambdifier/math_functions.hpp>
 #include <lambdifier/number.hpp>
 #include <lambdifier/variable.hpp>
+
+// TODO remove
+#include <iostream>
 
 namespace lambdifier
 {
@@ -286,6 +297,116 @@ std::string llvm_state::dump_function(const std::string &name) const
     } else {
         throw std::invalid_argument("Could not locate the function called '" + name + "'");
     }
+}
+
+void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys, unsigned max_order)
+{
+    // TODO taylor function naming.
+    detail::check_symbol_name(name);
+
+    if (module->getNamedValue(name) != nullptr) {
+        throw std::invalid_argument("The name '" + name + "' already exists in the module");
+    }
+
+    if (max_order == 0u) {
+        throw std::invalid_argument("The maximum order cannot be zero");
+    }
+
+    // Record the number of equations/variables.
+    const auto n_eq = sys.size();
+
+    // Decompose the system of equations.
+    const auto dc = decompose(std::move(sys));
+
+    // Compute the number of u variables.
+    assert(dc.size() > n_eq);
+    const auto n_uvars = dc.size() - n_eq;
+
+    std::cout << "n vars/eq: " << n_eq << '\n';
+    std::cout << "n uvars: " << n_uvars << '\n';
+
+    // Overflow checking. We want to make sure we can do all computations
+    // using uint32_t.
+    if (n_eq > std::numeric_limits<std::uint32_t>::max() || n_uvars > std::numeric_limits<std::uint32_t>::max()
+        || n_uvars > std::numeric_limits<std::uint32_t>::max() / max_order) {
+        throw std::overflow_error("An overflow condition was detected in the number of variables");
+    }
+
+    // Prepare the main function prototype. The arguments are:
+    // - double pointer to in/out array,
+    // - double (timestep),
+    // - 32-bit integer (order of the derivative).
+    std::vector<llvm::Type *> fargs{llvm::PointerType::getUnqual(builder->getDoubleTy()), builder->getDoubleTy(),
+                                    builder->getInt32Ty()};
+    // The function does not return anything.
+    auto *ft = llvm::FunctionType::get(builder->getVoidTy(), fargs, false);
+    assert(ft != nullptr);
+    // Now create the function.
+    auto *f = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, name, module.get());
+    assert(f != nullptr);
+    // Set the name of the function arguments.
+    auto arg_it = f->args().begin();
+    (arg_it++)->setName("in_out");
+    (arg_it++)->setName("h");
+    arg_it->setName("order");
+
+    // Create a new basic block to start insertion into.
+    auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
+    assert(bb != nullptr);
+    builder->SetInsertPoint(bb);
+
+    // Create the internal array variable.
+    // NOTE: the static cast is fine, as we checked above that n_uvars * max_order
+    // fits in 32 bits.
+    auto array_type = llvm::ArrayType::get(builder->getDoubleTy(), static_cast<std::uint64_t>(n_uvars * max_order));
+    assert(array_type != nullptr);
+    auto diff_arr = builder->CreateAlloca(array_type, 0, "diff");
+    assert(diff_arr != nullptr);
+
+    // Load the initial data for the state variables.
+    for (std::uint32_t i = 0; i < n_eq; ++i) {
+        // Fetch the input pointer from in_out.
+        auto in_ptr = builder->CreateInBoundsGEP(&*f->args().begin(), {builder->getInt32(i)}, "in_out_ptr");
+
+        // Create the load instruction from in_out.
+        auto tmp = builder->CreateLoad(in_ptr, "in_out_load");
+
+        // Fetch the target pointer in diff_arr.
+        auto out_ptr = builder->CreateInBoundsGEP(diff_arr,
+                                                  // The offsets. The first is fixed because
+                                                  // diff_arr somehow becomes a pointer
+                                                  // to itself in the generation of the instruction,
+                                                  // and thus we need to deref it. The second
+                                                  // offset is the index into the array.
+                                                  {builder->getInt32(0), builder->getInt32(i)},
+                                                  // Name for the pointer variable.
+                                                  "diff_ptr");
+
+        // Do the copy.
+        builder->CreateStore(tmp, out_ptr);
+    }
+
+    // Fill in the initial values for the u vars.
+    for (auto i = static_cast<std::uint32_t>(n_eq); i < n_uvars; ++i) {
+        const auto &u_ex = dc[i];
+
+        // Fetch the target pointer in diff_arr.
+        auto out_ptr = builder->CreateInBoundsGEP(diff_arr, {builder->getInt32(0), builder->getInt32(i)}, "diff_ptr");
+
+        // Run the initialization and store the result.
+        builder->CreateStore(u_ex.taylor_init(*this, diff_arr), out_ptr);
+    }
+
+    // Finish off the function.
+    builder->CreateRetVoid();
+
+    // Verify it.
+    verify_function(f);
+
+    // Run the optimization pass.
+    // if (opt_level > 0u) {
+    //     pm->run(*module);
+    // }
 }
 
 } // namespace lambdifier

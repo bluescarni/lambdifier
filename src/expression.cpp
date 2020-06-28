@@ -359,4 +359,9 @@ std::vector<expression> decompose(std::vector<expression> v_ex)
     return u_vars_defs;
 }
 
+llvm::Value *expression::taylor_init(llvm_state &s, llvm::Value *arr) const
+{
+    return m_ptr->taylor_init(s, arr);
+}
+
 } // namespace lambdifier
