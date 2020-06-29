@@ -422,15 +422,16 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     for (decltype(dc.size()) i = n_uvars; i < dc.size(); ++i) {
         const auto &ex = dc[i];
         const auto u_idx = static_cast<std::uint32_t>(i - n_uvars);
+        const auto fname = name + ".taylor.diff." + detail::li_to_string(u_idx);
 
         if (auto var_ptr = ex.extract<variable>()) {
             // ex is a variable.
-            u_diff_funcs.emplace_back(taylor_add_sv_diff(name, static_cast<std::uint32_t>(n_uvars), u_idx, *var_ptr));
+            u_diff_funcs.emplace_back(taylor_add_sv_diff(fname, static_cast<std::uint32_t>(n_uvars), *var_ptr));
         } else if (auto num_ptr = ex.extract<number>()) {
             // ex is a number. Add its index to the list
             // of constant-derivative state variables.
             cd_uvars.emplace(u_idx, *num_ptr);
-            u_diff_funcs.emplace_back(taylor_add_sv_diff(name, static_cast<std::uint32_t>(n_uvars), u_idx, *num_ptr));
+            u_diff_funcs.emplace_back(taylor_add_sv_diff(fname, static_cast<std::uint32_t>(n_uvars), *num_ptr));
         } else {
             // NOTE: ex can be only a variable or a number.
             assert(false);
