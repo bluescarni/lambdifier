@@ -12,13 +12,38 @@ using namespace Catch::literals;
 
 TEST_CASE("equality comparisons")
 {
-    expression ex1 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
-    expression ex2 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
-    expression ex3 = "z"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
-    expression ex4 = "x"_var + 3_num + "y"_var * (cos("x"_var - 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
-    REQUIRE(ex1 == ex2);
-    REQUIRE(ex1 != ex3);
-    REQUIRE(ex1 != ex4);
+    // Expression 1 
+    {
+        expression ex1 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+        expression ex2 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+        expression ex3 = "z"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+        expression ex4 = "x"_var + 3_num + "y"_var * (cos("x"_var - 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+        REQUIRE(ex1 == ex1);
+        REQUIRE(ex1 == ex2);
+        REQUIRE(ex1 != ex3);
+        REQUIRE(ex1 != ex4);
+    }
+    // Expression 2
+    {
+        expression ex1 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex2 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex3 = pow("y"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex4 = pow("x"_var + sin(-1_num), "z"_var + 2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex5 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (cos("x"_var + 3.322_num)));
+        REQUIRE(ex1 == ex2);
+        REQUIRE(ex1 != ex3);
+        REQUIRE(ex1 != ex4);
+        REQUIRE(ex1 != ex5);
+    }
+    // Identities that will not hold
+    {
+        expression ex1 = 1_num + cos("x"_var);
+        expression ex2 = cos("x"_var) + 1_num;
+        expression ex3 = cos("x"_var) + 1_num + ex1 - ex1;
+
+        REQUIRE(ex1 != ex2);
+        REQUIRE(ex3 != ex2);
+    }
 }
 
 TEST_CASE("call operator")
@@ -217,9 +242,14 @@ TEST_CASE("gradient")
 
 TEST_CASE("symbolic differentiation")
 {
-    // We test that the gradient of x is one
+    // We test that the derivative of x is one
     {
         expression ex = "x"_var;
         REQUIRE(ex.diff("x") == 1_num);
+    }
+    // We test that the derivative of sin is cos
+    {
+        expression ex = sin("x"_var);
+        REQUIRE(ex.diff("x") == cos("x"_var));
     }
 }
