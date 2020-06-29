@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>
+
 
 #include <llvm/IR/Value.h>
 
@@ -132,6 +134,10 @@ double expression::operator()(std::unordered_map<std::string, double> &in) const
 
 void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
 {
+    // We first resize out (TODO: a check on the consistency of the in sizes?)
+    decltype((*in.begin()).second.size()) n;
+    n = (in.empty()) ? 0u : (*in.begin()).second.size();
+    out.resize(n);
     return m_ptr->evaluate(in, out);
 }
 

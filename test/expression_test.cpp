@@ -12,7 +12,7 @@ using namespace Catch::literals;
 
 TEST_CASE("equality comparisons")
 {
-    // Expression 1 
+    // Expression 1
     {
         expression ex1 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
         expression ex2 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
@@ -25,11 +25,15 @@ TEST_CASE("equality comparisons")
     }
     // Expression 2
     {
-        expression ex1 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
-        expression ex2 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
-        expression ex3 = pow("y"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex1
+            = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex2
+            = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
+        expression ex3
+            = pow("y"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
         expression ex4 = pow("x"_var + sin(-1_num), "z"_var + 2_num) / ("x"_var / "y"_var + (sin("x"_var + 3.322_num)));
-        expression ex5 = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (cos("x"_var + 3.322_num)));
+        expression ex5
+            = pow("x"_var + sin(-1_num), "z"_var + -2_num) / ("x"_var / "y"_var + (cos("x"_var + 3.322_num)));
         REQUIRE(ex1 == ex2);
         REQUIRE(ex1 != ex3);
         REQUIRE(ex1 != ex4);
@@ -83,6 +87,48 @@ TEST_CASE("call operator")
         expression ex = "x"_var * "y"_var;
         std::unordered_map<std::string, double> in{{"x", 2.345}};
         REQUIRE(ex(in) == 0.);
+    }
+}
+
+TEST_CASE("call operator (batch)")
+{
+    std::vector<double> out(2);
+    // We test on a number
+    {
+        expression ex = 2.345_num;
+        std::unordered_map<std::string, std::vector<double>> in{{"x", {-2.345, 20.234}}};
+        ex(in, out);
+        REQUIRE(out == std::vector<double>{2.345, 2.345});
+    }
+    // We test on a variable
+    {
+        expression ex = "x"_var;
+        std::unordered_map<std::string, std::vector<double>> in{{"x", {-2.345, 20.234}}};
+        ex(in, out);
+        REQUIRE(out == std::vector<double>{-2.345, 20.234});
+    }
+    // We test on a function call
+    {
+        expression ex = cos("x"_var);
+        std::unordered_map<std::string, std::vector<double>> in{{"x", {-2.345, 20.234}}};
+        ex(in, out);
+        REQUIRE(out == std::vector<double>{std::cos(-2.345), std::cos(20.234)});
+    }
+    // We test on a deeper tree
+    {
+        expression ex = "x"_var * "y"_var + cos("x"_var * "y"_var);
+        std::unordered_map<std::string, std::vector<double>> in;
+        in["x"] = std::vector<double>{3., 4.};
+        in["y"] = std::vector<double>{-1., -2.};
+        ex(in, out);
+        REQUIRE(out == std::vector<double>{-3 + std::cos(-3), -8 + std::cos(-8)});
+    }
+    // We test the corner case of a dictionary not containing the variable.
+    {
+        expression ex = "x"_var * "y"_var;
+        std::unordered_map<std::string, std::vector<double>> in{{"x", {-2.345, 20.234}}};
+        ex(in, out);
+        REQUIRE(out == std::vector<double>{0., 0.});
     }
 }
 
