@@ -2,6 +2,7 @@
 #define LAMBDIFIER_EXPRESSION_HPP
 
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <ostream>
 #include <stdexcept>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/detail/fwd_decl.hpp>
@@ -33,15 +35,23 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const = 0;
     virtual expression diff(const std::string &) const = 0;
     virtual llvm::Value *taylor_init(llvm_state &, llvm::Value *) const = 0;
+    virtual llvm::Function *taylor_diff(llvm_state &, const std::string &, std::uint32_t,
+                                        const std::unordered_map<std::uint32_t, number> &) const = 0;
 };
 
 template <typename T>
-concept taylor_expr = requires(const detail::remove_cvref_t<T> &t, llvm_state &s, llvm::Value *arr)
+concept taylor_expr
+    = requires(const detail::remove_cvref_t<T> &t, llvm_state &s, llvm::Value *arr, const std::string &name,
+               std::uint32_t n_uvars, const std::unordered_map<std::uint32_t, number> &cd_uvars)
 {
     {
         t.taylor_init(s, arr)
     }
     ->detail::same_as<llvm::Value *>;
+    {
+        t.taylor_diff(s, name, n_uvars, cd_uvars)
+    }
+    ->detail::same_as<llvm::Function *>;
 };
 
 template <typename T>
@@ -88,6 +98,16 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
     {
         if constexpr (taylor_expr<T>) {
             return m_value.taylor_init(s, arr);
+        } else {
+            throw std::invalid_argument("The expression '" + to_string()
+                                        + "' is not suitable for use in Taylor integration");
+        }
+    }
+    llvm::Function *taylor_diff(llvm_state &s, const std::string &name, std::uint32_t n_uvars,
+                                const std::unordered_map<std::uint32_t, number> &cd_uvars) const final
+    {
+        if constexpr (taylor_expr<T>) {
+            return m_value.taylor_diff(s, name, n_uvars, cd_uvars);
         } else {
             throw std::invalid_argument("The expression '" + to_string()
                                         + "' is not suitable for use in Taylor integration");
@@ -141,6 +161,8 @@ public:
     expression diff(const std::string &) const;
 
     llvm::Value *taylor_init(llvm_state &, llvm::Value *) const;
+    llvm::Function *taylor_diff(llvm_state &, const std::string &, std::uint32_t,
+                                const std::unordered_map<std::uint32_t, number> &) const;
 
 private:
     detail::expr_inner_base const *ptr() const

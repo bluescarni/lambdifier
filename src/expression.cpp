@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -6,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/binary_operator.hpp>
@@ -362,6 +364,12 @@ std::vector<expression> taylor_decompose(std::vector<expression> v_ex)
 llvm::Value *expression::taylor_init(llvm_state &s, llvm::Value *arr) const
 {
     return m_ptr->taylor_init(s, arr);
+}
+
+llvm::Function *expression::taylor_diff(llvm_state &s, const std::string &name, std::uint32_t n_uvars,
+                                        const std::unordered_map<std::uint32_t, number> &cd_uvars) const
+{
+    return m_ptr->taylor_diff(s, name, n_uvars, cd_uvars);
 }
 
 } // namespace lambdifier
