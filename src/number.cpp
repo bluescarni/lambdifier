@@ -44,6 +44,12 @@ void number::evaluate(std::unordered_map<std::string, std::vector<double>> &, st
 {
     out = std::vector<double>(out.size(), value);
 }
+// leaves of the tree have no connected nodes.
+void number::compute_connections(std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter) const
+{
+    node_counter++;
+    node_connections.push_back(std::vector<unsigned>());
+}
 expression number::diff(const std::string &) const
 {
     return expression{number{0}};

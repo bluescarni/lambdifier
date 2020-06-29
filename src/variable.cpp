@@ -52,12 +52,20 @@ double variable::evaluate(std::unordered_map<std::string, double> &in) const
 
 void variable::evaluate(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
 {
-    // we need to distinguish these cases as at this level as to avoid to create an empty map.
+    // If the variable name is a key in the dictionary then assign its value
     if (in.find(name) != in.end()) {
         out = in[name];
+    // Assume its a vector of zeros.
     } else {
         out = std::vector<double>(out.size(), 0.);
     }
+}
+
+// leaves of the tree have no connected nodes.
+void variable::compute_connections(std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter) const
+{
+    node_connections.push_back(std::vector<unsigned>());
+    node_counter++;
 }
 
 expression variable::diff(const std::string &s) const

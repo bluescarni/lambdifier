@@ -270,6 +270,17 @@ void function_call::evaluate(std::unordered_map<std::string, std::vector<double>
         throw std::runtime_error("No evaluate implemented for this function call: " + display_name);
     }
 }
+void function_call::compute_connections(std::vector<std::vector<unsigned>> &node_connections,
+                                        unsigned &node_counter) const
+{
+    const unsigned node_id = node_counter;
+    node_counter++;
+    node_connections.push_back(std::vector<unsigned>(get_args().size()));
+    for (auto i = 0u; i < get_args().size(); ++i) {
+        node_connections[node_id][i] = node_counter;
+        get_args()[i].compute_connections(node_connections, node_counter);
+    };
+}
 double function_call::evaluate_num(std::vector<double> &in) const
 {
     if (eval_num_f) {

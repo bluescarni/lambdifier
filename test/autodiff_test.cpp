@@ -16,7 +16,7 @@ TEST_CASE("compute connections")
     // We test the result on a simple polynomial x^2*y + 2
     {
         expression ex = ("x"_var * ("x"_var * "y"_var)) + 2_num;
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         REQUIRE(connections[0] == std::vector<unsigned>{1, 6});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 3});
         REQUIRE(connections[2] == std::vector<unsigned>{});
@@ -28,7 +28,7 @@ TEST_CASE("compute connections")
     // We test the result on a known expression with a simple function 2cos(x) + 2yz
     {
         expression ex = cos("x"_var) * 2_num + ("y"_var * "z"_var) * 2_num;
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         REQUIRE(connections[0] == std::vector<unsigned>{1, 5});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 4});
         REQUIRE(connections[2] == std::vector<unsigned>{3});
@@ -43,7 +43,7 @@ TEST_CASE("compute connections")
     // We test the result on a known expression including a multiargument function
     {
         expression ex = pow("x"_var, 2_num) + ("y"_var * "z"_var) * 2_num;
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         REQUIRE(connections[0] == std::vector<unsigned>{1, 4});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 3});
         REQUIRE(connections[2] == std::vector<unsigned>{});
@@ -61,30 +61,30 @@ TEST_CASE("gradient")
     // We test that the gradient of x is one
     {
         expression ex = "x"_var;
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         std::unordered_map<std::string, double> point;
         point["x"] = 2.3;
-        auto grad = gradient(ex, point, connections);
+        auto grad = ex.gradient(point, connections);
         REQUIRE(grad["x"] == 1);
     }
     // We test that the gradient of x*y is {x, y}
     {
         expression ex = "x"_var * "y"_var;
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         std::unordered_map<std::string, double> point;
         point["x"] = 2.3;
         point["y"] = 12.43;
-        auto grad = gradient(ex, point, connections);
+        auto grad = ex.gradient(point, connections);
         REQUIRE(grad["x"] == 12.43);
         REQUIRE(grad["y"] == 2.3);
     }
     // We test that the gradient of the mathematical identity sin^2(x) + cos^2(x) = 1 is zero
     {
         expression ex = cos("x"_var) * cos("x"_var) + sin("x"_var) * sin("x"_var);
-        auto connections = compute_connections(ex);
+        auto connections = ex.compute_connections();
         std::unordered_map<std::string, double> point;
         point["x"] = 2.3;
-        auto grad = gradient(ex, point, connections);
+        auto grad = ex.gradient(point, connections);
         REQUIRE(grad["x"] == 0_a);
     }
 }

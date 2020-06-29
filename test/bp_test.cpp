@@ -59,14 +59,13 @@ int main()
           + cos((sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
                      * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
                  + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})));
-    auto node_connections = compute_connections(ex);
+    auto connections = compute_connections(ex);
     auto args_vv = random_args_vv(N, 3u);
     auto args_vd = vv_to_vd(args_vv);
-std::cout << node_connections.size() << std::endl;
     // 1 - We time the autodiff
     auto start = high_resolution_clock::now();
-    for (auto &args : args_vd) {
-        auto grad = gradient(ex, args, node_connections);
+    for (auto &point : args_vd) {
+        auto grad = ex.gradient(point, connections);
     }
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
