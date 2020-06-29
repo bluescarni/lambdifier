@@ -37,8 +37,19 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual void compute_node_values(std::unordered_map<std::string, double> &, std::vector<double> &,
                                      const std::vector<std::vector<unsigned>> &, unsigned &)
         = 0;
+    // Auxiliary algorithms on the expression tree
     virtual void gradient(std::unordered_map<std::string, double> &, std::unordered_map<std::string, double> &,
                           const std::vector<double> &, const std::vector<std::vector<unsigned>> &, unsigned &, double) = 0;
+    virtual llvm::Value *taylor_init(llvm_state &, llvm::Value *) const = 0;
+};
+
+template <typename T>
+concept taylor_expr = requires(const detail::remove_cvref_t<T> &t, llvm_state &s, llvm::Value *arr)
+{
+    {
+        t.taylor_init(s, arr)
+    }
+    ->detail::same_as<llvm::Value *>;
 };
 
 template <typename T>
@@ -98,6 +109,16 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
     }
 
     expression diff(const std::string &) const final;
+
+    llvm::Value *taylor_init(llvm_state &s, llvm::Value *arr) const final
+    {
+        if constexpr (taylor_expr<T>) {
+            return m_value.taylor_init(s, arr);
+        } else {
+            throw std::invalid_argument("The expression '" + to_string()
+                                        + "' is not suitable for use in Taylor integration");
+        }
+    }
 };
 
 } // namespace detail
@@ -163,6 +184,8 @@ public:
     std::string to_string() const;
 
     expression diff(const std::string &) const;
+
+    llvm::Value *taylor_init(llvm_state &, llvm::Value *) const;
 
 private:
     detail::expr_inner_base const *ptr() const
@@ -233,7 +256,7 @@ inline expression expr_inner<T>::diff(const std::string &s) const
 
 } // namespace detail
 
-LAMBDIFIER_DLL_PUBLIC std::vector<expression> decompose(std::vector<expression> v);
+LAMBDIFIER_DLL_PUBLIC std::vector<expression> taylor_decompose(std::vector<expression> v);
 
 } // namespace lambdifier
 

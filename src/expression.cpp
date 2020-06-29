@@ -1,7 +1,5 @@
 #include <algorithm>
-#include <locale>
 #include <ostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -11,6 +9,7 @@
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/binary_operator.hpp>
+#include <lambdifier/detail/string_conv.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -211,13 +210,14 @@ expression operator/(expression e1, expression e2)
         } else if (e2_nptr->get_value() == -1) {
             // symbolic / -1 = -symbolic.
             return -std::move(e1);
+        } else {
+            // symbolic / x = symbolic * 1/x.
+            return std::move(e1) * expression{number{1 / e2_nptr->get_value()}};
         }
-        // NOTE: if we get here, it means that e1 is symbolic and e2 is a
-        // number different from -1 or 1. We will fall through
-        // the standard case.
+    } else {
+        // The standard case.
+        return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
     }
-    // The standard case.
-    return expression{binary_operator{'/', std::move(e1), std::move(e2)}};
 }
 
 expression &operator+=(expression &x, expression e)
@@ -261,27 +261,6 @@ namespace detail
 namespace
 {
 
-// Locale-independent to_string()/from_string() implementation. See:
-// https://stackoverflow.com/questions/1333451/locale-independent-atof
-template <typename T>
-std::string li_to_string(const T &x)
-{
-    std::ostringstream oss;
-    oss.imbue(std::locale("C"));
-    oss << x;
-    return oss.str();
-}
-
-template <typename T>
-T li_from_string(const std::string &s)
-{
-    T out(0);
-    std::istringstream iss(s);
-    iss.imbue(std::locale("C"));
-    iss >> out;
-    return out;
-}
-
 void rename_ex_variables(expression &ex, const std::unordered_map<std::string, std::string> &repl_map)
 {
     if (auto bo_ptr = ex.extract<binary_operator>()) {
@@ -302,7 +281,7 @@ void rename_ex_variables(expression &ex, const std::unordered_map<std::string, s
 // Transform in-place ex by decomposition, appending the
 // result of the decomposition to u_vars_defs.
 // NOTE: this will render ex unusable.
-void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
+void taylor_decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
 {
     if (ex.extract<variable>() != nullptr || ex.extract<number>() != nullptr) {
         // NOTE: an expression does *not* require decomposition
@@ -322,7 +301,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         // u variable. If it did not, it means that the lhs
         // was a variable or a number (see above), and thus
         // we can use it as-is.
-        decompose_ex(bo_ptr->access_lhs(), u_vars_defs);
+        taylor_decompose_ex(bo_ptr->access_lhs(), u_vars_defs);
         new_size = u_vars_defs.size();
         if (new_size > old_size) {
             bo_ptr->access_lhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -330,7 +309,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         old_size = new_size;
 
         // Same for the rhs.
-        decompose_ex(bo_ptr->access_rhs(), u_vars_defs);
+        taylor_decompose_ex(bo_ptr->access_rhs(), u_vars_defs);
         new_size = u_vars_defs.size();
         if (new_size > old_size) {
             bo_ptr->access_rhs() = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -343,7 +322,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
         auto old_size = u_vars_defs.size(), new_size = old_size;
 
         for (auto &arg : func_ptr->access_args()) {
-            decompose_ex(arg, u_vars_defs);
+            taylor_decompose_ex(arg, u_vars_defs);
             new_size = u_vars_defs.size();
             if (new_size > old_size) {
                 arg = expression{variable{"u_" + detail::li_to_string(new_size - 1u)}};
@@ -360,7 +339,7 @@ void decompose_ex(expression &ex, std::vector<expression> &u_vars_defs)
 
 } // namespace detail
 
-std::vector<expression> decompose(std::vector<expression> v_ex)
+std::vector<expression> taylor_decompose(std::vector<expression> v_ex)
 {
     // Determine the variables in the system of equations.
     std::vector<std::string> vars;
@@ -402,7 +381,7 @@ std::vector<expression> decompose(std::vector<expression> v_ex)
     // Decompose the equations.
     for (decltype(v_ex.size()) i = 0; i < v_ex.size(); ++i) {
         const auto orig_size = u_vars_defs.size();
-        detail::decompose_ex(v_ex[i], u_vars_defs);
+        detail::taylor_decompose_ex(v_ex[i], u_vars_defs);
         if (u_vars_defs.size() != orig_size) {
             // NOTE: if the size of u_vars_defs changes,
             // it means we had to decompose v_ex[i]. In such
@@ -423,6 +402,11 @@ std::vector<expression> decompose(std::vector<expression> v_ex)
     }
 
     return u_vars_defs;
+}
+
+llvm::Value *expression::taylor_init(llvm_state &s, llvm::Value *arr) const
+{
+    return m_ptr->taylor_init(s, arr);
 }
 
 } // namespace lambdifier

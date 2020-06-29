@@ -368,6 +368,7 @@ void llvm_state::add_batch_expression(const std::string &name, const std::vector
         // to this function).
         &*in_arg,
         // The offset.
+        // NOTE: multiplication works regardless of integral signedness.
         builder->CreateMul(variable, builder->getInt32(static_cast<std::uint32_t>(vars.size())), "in_offset"),
         // Name for the pointer variable.
         "in_ptr");
@@ -378,9 +379,11 @@ void llvm_state::add_batch_expression(const std::string &name, const std::vector
     builder->CreateStore(vec_f_call, out_ptr);
 
     // Compute the next value of the iteration.
+    // NOTE: addition works regardless of integral signedness.
     auto *next_var = builder->CreateAdd(variable, builder->getInt32(1), "nextvar");
 
     // Compute the end condition.
+    // NOTE: we use the unsigned less-than predicate.
     auto *end_cond = builder->CreateICmp(llvm::CmpInst::ICMP_ULT, next_var, builder->getInt32(batch_size), "loopcond");
 
     // Create the "after loop" block and insert it.

@@ -8,6 +8,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -80,6 +81,8 @@ public:
 
     expression to_expression(const std::string &) const;
 
+    void add_taylor(const std::string &, std::vector<expression>, unsigned = 20);
+
 private:
     template <std::size_t>
     using always_double_t = double;
@@ -100,6 +103,13 @@ public:
         // NOTE: possible improvement here is to ensure that N
         // is consistent with the number of arguments in the function.
         return reinterpret_cast<vararg_f_ptr<N>>(jit_lookup(name));
+    }
+
+    // TODO decide API
+    using f_taylor_ptr = void (*)(double *, double, std::uint32_t);
+    f_taylor_ptr fetch_taylor(const std::string &name)
+    {
+        return reinterpret_cast<f_taylor_ptr>(jit_lookup(name));
     }
 };
 

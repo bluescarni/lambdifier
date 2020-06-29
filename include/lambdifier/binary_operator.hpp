@@ -116,6 +116,7 @@ public:
         }
     }
     expression diff(const std::string &) const;
+    llvm::Value *taylor_init(llvm_state &, llvm::Value *) const;
 };
 
 } // namespace lambdifier

@@ -115,6 +115,7 @@ set(LAMBDIFIER_SRC_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/math_functions.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/jit.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/check_symbol_name.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/detail/string_conv.cpp"
 )
 
 # Setup of the lambdifier shared library.
