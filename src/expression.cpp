@@ -40,6 +40,86 @@ llvm::Value *expression::codegen(llvm_state &s) const
     return m_ptr->codegen(s);
 }
 
+bool expression::operator==(const expression &other) const
+{
+    if (auto bo_ptr = extract<binary_operator>()) {
+        if (auto bo_ptr_other = other.extract<binary_operator>()) {
+            switch (bo_ptr->get_op()) {
+                case '+':
+                    if (bo_ptr_other->get_op() == '+') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                case '-':
+                    if (bo_ptr_other->get_op() == '-') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                case '*':
+                    if (bo_ptr_other->get_op() == '*') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                default:
+                    assert(bo_ptr->get_op() == '/');
+                    if (bo_ptr_other->get_op() == '/') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+            }
+        } else {
+            return false;
+        }
+    } else if (auto fun_ptr = extract<function_call>()) {
+        if (auto fun_ptr_other = other.extract<function_call>()) {
+            if (fun_ptr->get_name() == fun_ptr_other->get_name()) {
+                if (fun_ptr->get_args().size() == fun_ptr_other->get_args().size()) {
+                    return std::equal(fun_ptr->get_args().begin(), fun_ptr->get_args().end(),
+                                      fun_ptr_other->get_args().begin());
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    } else if (auto num_ptr = extract<number>()) {
+        if (auto num_ptr_other = other.extract<number>()) {
+            return num_ptr->get_value() == num_ptr_other->get_value();
+        } else {
+            return false;
+        }
+    } else if (auto var_ptr = extract<variable>()) {
+        if (auto var_ptr_other = other.extract<variable>()) {
+            return var_ptr->get_name() == var_ptr_other->get_name();
+        } else {
+            return false;
+        }
+    } else {
+        // throw?
+        return false;
+    }
+}
+
+bool expression::operator!=(const expression &other) const
+{
+    return !(*this == other);
+}
+
 std::string expression::to_string() const
 {
     return m_ptr->to_string();

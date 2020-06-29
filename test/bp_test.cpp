@@ -3,7 +3,6 @@
 #include <iostream>
 #include <random>
 
-#include <lambdifier/autodiff.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/math_functions.hpp>
 #include <lambdifier/number.hpp>

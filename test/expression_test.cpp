@@ -1,6 +1,5 @@
 #include <vector>
 
-#include <lambdifier/autodiff.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/math_functions.hpp>
 #include <lambdifier/number.hpp>
@@ -10,6 +9,17 @@
 
 using namespace lambdifier;
 using namespace Catch::literals;
+
+TEST_CASE("equality comparisons")
+{
+    expression ex1 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+    expression ex2 = "x"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+    expression ex3 = "z"_var + 3_num + "y"_var * (cos("x"_var + 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+    expression ex4 = "x"_var + 3_num + "y"_var * (cos("x"_var - 3_num)) / pow("x"_var + 3_num, "z"_var + 3_num);
+    REQUIRE(ex1 == ex2);
+    REQUIRE(ex1 != ex3);
+    REQUIRE(ex1 != ex4);
+}
 
 TEST_CASE("call operator")
 {
@@ -23,7 +33,7 @@ TEST_CASE("call operator")
     {
         expression ex = "x"_var;
         std::unordered_map<std::string, double> in{{"x", 2.345}};
-        REQUIRE(ex(in)  == 2.345);
+        REQUIRE(ex(in) == 2.345);
     }
     // We test on a function call
     {
@@ -39,13 +49,13 @@ TEST_CASE("call operator")
     }
     // We test on a deeper tree
     {
-        expression ex = "x"_var * "y"_var + cos("x"_var*"y"_var); 
+        expression ex = "x"_var * "y"_var + cos("x"_var * "y"_var);
         std::unordered_map<std::string, double> in{{"x", 2.345}, {"y", -1.}};
         REQUIRE(ex(in) == -2.345 + std::cos(-2.345));
     }
     // We test the corner case of a dictionary not containing the variable.
     {
-        expression ex = "x"_var * "y"_var; 
+        expression ex = "x"_var * "y"_var;
         std::unordered_map<std::string, double> in{{"x", 2.345}};
         REQUIRE(ex(in) == 0.);
     }
@@ -140,11 +150,12 @@ TEST_CASE("compute node values")
         REQUIRE(node_values.size() == 3u);
         REQUIRE(node_values[0] == 1);
         REQUIRE(node_values[1] == 2.345);
-        REQUIRE(node_values[2] == 2.345);
+        // Note here that the tree built (after the simplifictions) is *, "x", 1/2.345
+        REQUIRE(node_values[2] == 1. / 2.345);
     }
     // We test on a deeper tree
     {
-        expression ex = "x"_var * "y"_var + cos("x"_var*"y"_var); 
+        expression ex = "x"_var * "y"_var + cos("x"_var * "y"_var);
         std::unordered_map<std::string, double> in{{"x", 2.345}, {"y", -1.}};
         auto connections = ex.compute_connections();
         auto node_values = ex.compute_node_values(in, connections);
@@ -160,7 +171,7 @@ TEST_CASE("compute node values")
     }
     // We test the corner case of a dictionary not containing the variable.
     {
-        expression ex = "x"_var * "y"_var; 
+        expression ex = "x"_var * "y"_var;
         std::unordered_map<std::string, double> in{{"x", 2.345}};
         auto connections = ex.compute_connections();
         auto node_values = ex.compute_node_values(in, connections);
@@ -201,5 +212,14 @@ TEST_CASE("gradient")
         point["x"] = 2.3;
         auto grad = ex.gradient(point, connections);
         REQUIRE(grad["x"] == 0_a);
+    }
+}
+
+TEST_CASE("symbolic differentiation")
+{
+    // We test that the gradient of x is one
+    {
+        expression ex = "x"_var;
+        REQUIRE(ex.diff("x") == 1_num);
     }
 }
