@@ -2,16 +2,19 @@
 #define LAMBDIFIER_BINARY_OPERATOR_HPP
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Value.h>
 
 #include <lambdifier/detail/visibility.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/llvm_state.hpp>
+#include <lambdifier/number.hpp>
 
 namespace lambdifier
 {
@@ -41,10 +44,15 @@ public:
 
     llvm::Value *codegen(llvm_state &) const;
     std::string to_string() const;
+
     double evaluate(std::unordered_map<std::string, double> &) const;
     void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+
     expression diff(const std::string &) const;
+
     llvm::Value *taylor_init(llvm_state &, llvm::Value *) const;
+    llvm::Function *taylor_diff(llvm_state &, const std::string &, std::uint32_t,
+                                const std::unordered_map<std::uint32_t, number> &) const;
 };
 
 } // namespace lambdifier

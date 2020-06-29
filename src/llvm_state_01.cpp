@@ -438,6 +438,12 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
         }
     }
 
+    // Now the derivatives of the other u variables.
+    for (decltype(dc.size()) i = n_eq; i < n_uvars; ++i) {
+        u_diff_funcs.emplace_back(dc[i].taylor_diff(*this, name + ".taylor.diff." + detail::li_to_string(i),
+                                                    static_cast<std::uint32_t>(n_uvars), cd_uvars));
+    }
+
     // Prepare the main function prototype. The arguments are:
     // - double pointer to in/out array,
     // - double (timestep),
@@ -549,7 +555,37 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     auto *variable = builder->CreatePHI(builder->getInt32Ty(), 2, "i");
     variable->addIncoming(start_val, preheader_bb);
 
-    // TODO loop body.
+    // Loop body.
+
+    // For each u var, we invoke the function to
+    // compute its derivative at the current order.
+    for (decltype(dc.size()) i = 0; i < n_uvars; ++i) {
+        // Compute the diff_arr index into which we will be writing.
+        // The index is num_uvars * current_order + i.
+        auto out_idx
+            = builder->CreateAdd(builder->CreateMul(builder->getInt32(static_cast<std::uint32_t>(n_uvars)), variable),
+                                 builder->getInt32(static_cast<std::uint32_t>(i)));
+        // Get the corresponding pointer.
+        auto out_ptr = builder->CreateInBoundsGEP(diff_arr, {builder->getInt32(0), out_idx},
+                                                  "out_ptr_" + detail::li_to_string(i));
+
+        // Invoke the derivative and store the result.
+        auto diff_f_call
+            = builder->CreateCall(u_diff_funcs[i], {base_diff_ptr, variable}, "uv_diff_" + detail::li_to_string(i));
+        diff_f_call->setTailCall(true);
+        builder->CreateStore(diff_f_call, out_ptr);
+
+        // If i is a state variable, update the values in the accumulators.
+        if (i < n_eq) {
+            // Perform the computation: sv_acc[i] = sv_acc[i] + h_acc * diff_f_call.
+            builder->CreateStore(builder->CreateFAdd(builder->CreateLoad(sv_acc[i]),
+                                                     builder->CreateFMul(builder->CreateLoad(h_acc), diff_f_call)),
+                                 sv_acc[i]);
+        }
+    }
+
+    // Update the value of h_acc.
+    builder->CreateStore(builder->CreateFMul(builder->CreateLoad(h_acc), h_arg), h_acc);
 
     // Compute the next value of the iteration.
     // NOTE: addition works regardless of integral signedness.
@@ -598,9 +634,9 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     verify_function(f);
 
     // Run the optimization pass.
-    // if (opt_level > 0u) {
-    //     pm->run(*module);
-    // }
+    if (opt_level > 0u) {
+        pm->run(*module);
+    }
 }
 
 } // namespace lambdifier

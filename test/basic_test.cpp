@@ -19,17 +19,17 @@ int main()
 
     s.add_taylor("sbaffo", {y, (1_num - x * x) * y - x});
 
-    std::cout << s.dump() << '\n';
+    // std::cout << s.dump() << '\n';
 
     s.compile();
 
+    std::cout.precision(14);
+
     double state[] = {1, 2};
 
-    s.fetch_taylor("sbaffo")(state, 1.2, 1);
-
-    for (auto x : state) {
-        std::cout << x << '\n';
-    }
+    s.fetch_taylor("sbaffo")(state, .1, 12);
+    s.fetch_taylor("sbaffo")(state, -.1, 12);
+    std::cout << state[0] << ", " << state[1] << '\n';
 
     return 0;
 
