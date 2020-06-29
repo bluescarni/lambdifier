@@ -23,9 +23,9 @@ int main()
 
     s.compile();
 
-    double state[] = {1, 2, 0, 0, 0, 0};
+    double state[] = {1, 2};
 
-    s.fetch_taylor("sbaffo")(state, 1.2, 4);
+    s.fetch_taylor("sbaffo")(state, 1.2, 1);
 
     for (auto x : state) {
         std::cout << x << '\n';

@@ -20,6 +20,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <lambdifier/detail/check_symbol_name.hpp>
+#include <lambdifier/detail/string_conv.hpp>
 #include <lambdifier/expression.hpp>
 #include <lambdifier/function_call.hpp>
 #include <lambdifier/llvm_state.hpp>
@@ -299,6 +300,81 @@ std::string llvm_state::dump_function(const std::string &name) const
     }
 }
 
+// Create the function to implement the n-th order normalised derivative of the idx-th
+// state variable in a Taylor system. n_uvars is the total number of
+// u variables in the decomposition, var is the u variable which is equal to
+// the first derivative of the idx-th state variable.
+llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &name, std::uint32_t n_uvars, std::uint32_t idx,
+                                               const variable &var)
+{
+    // Compose the function name.
+    const auto fname = name + ".taylor.diff." + detail::li_to_string(idx);
+
+    // TODO check if fname is present already.
+
+    // Extract the index of the u variable.
+    const auto u_idx = detail::uname_to_index(var.get_name());
+
+    // Prepare the main function prototype. The arguments are:
+    // - const double pointer to the derivatives array,
+    // - 32-bit integer (order of the derivative).
+    std::vector<llvm::Type *> fargs{llvm::PointerType::getUnqual(builder->getDoubleTy()), builder->getInt32Ty()};
+
+    // The function will return the n-th derivative.
+    auto *ft = llvm::FunctionType::get(builder->getDoubleTy(), fargs, false);
+    assert(ft != nullptr);
+
+    // Now create the function. Don't need to call it from outside,
+    // thus internal linkage.
+    auto *f = llvm::Function::Create(ft, llvm::Function::InternalLinkage, fname, module.get());
+    assert(f != nullptr);
+
+    // Setup the function arugments.
+    auto arg_it = f->args().begin();
+    arg_it->setName("diff_ptr");
+    arg_it->addAttr(llvm::Attribute::ReadOnly);
+    arg_it->addAttr(llvm::Attribute::NoCapture);
+    auto diff_ptr = arg_it;
+
+    (++arg_it)->setName("order");
+    auto order = arg_it;
+
+    // Create a new basic block to start insertion into.
+    auto *bb = llvm::BasicBlock::Create(get_context(), "entry", f);
+    assert(bb != nullptr);
+    builder->SetInsertPoint(bb);
+
+    // Fetch from diff_ptr the pointer to the u variable
+    // at u_idx. The index is (order - 1) * n_uvars + u_idx.
+    auto in_ptr = builder->CreateInBoundsGEP(
+        diff_ptr,
+        {builder->CreateAdd(
+            builder->CreateMul(builder->getInt32(n_uvars), builder->CreateSub(order, builder->getInt32(1))),
+            builder->getInt32(u_idx))},
+        "diff_ptr");
+
+    // Load the value from in_ptr.
+    auto diff_load = builder->CreateLoad(in_ptr, "diff_load");
+
+    // We have to divide the derivative by order
+    // to get the normalised derivative of the state variable.
+    // TODO precompute in the main function the 1/n factors?
+    auto ret = builder->CreateFDiv(diff_load, builder->CreateUIToFP(order, builder->getDoubleTy()));
+
+    builder->CreateRet(ret);
+
+    // Verify it.
+    verify_function(f);
+
+    return f;
+}
+
+llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &, std::uint32_t, std::uint32_t, const number &)
+{
+    // TODO
+    throw std::runtime_error("No support for state variables with constant derivatives yet!");
+}
+
 void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys, unsigned max_order)
 {
     // TODO taylor function naming.
@@ -337,6 +413,34 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
         throw std::overflow_error("An overflow condition was detected in the number of variables");
     }
 
+    // Create the functions for the computation of the derivatives
+    // of the u variables. We begin with the state variables.
+    // We will also identify the state variables whose derivatives
+    // are constants and record them.
+    std::unordered_map<std::uint32_t, number> cd_uvars;
+    // We will store pointers to the created functions
+    // for later use.
+    std::vector<llvm::Function *> u_diff_funcs;
+    // NOTE: the derivatives of the state variables
+    // are at the end of the decomposition vector.
+    for (decltype(dc.size()) i = n_uvars; i < dc.size(); ++i) {
+        const auto &ex = dc[i];
+        const auto u_idx = static_cast<std::uint32_t>(i - n_uvars);
+
+        if (auto var_ptr = ex.extract<variable>()) {
+            // ex is a variable.
+            u_diff_funcs.emplace_back(taylor_add_sv_diff(name, static_cast<std::uint32_t>(n_uvars), u_idx, *var_ptr));
+        } else if (auto num_ptr = ex.extract<number>()) {
+            // ex is a number. Add its index to the list
+            // of constant-derivative state variables.
+            cd_uvars.emplace(u_idx, *num_ptr);
+            u_diff_funcs.emplace_back(taylor_add_sv_diff(name, static_cast<std::uint32_t>(n_uvars), u_idx, *num_ptr));
+        } else {
+            // NOTE: ex can be only a variable or a number.
+            assert(false);
+        }
+    }
+
     // Prepare the main function prototype. The arguments are:
     // - double pointer to in/out array,
     // - double (timestep),
@@ -351,8 +455,11 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     assert(f != nullptr);
     // Set the name of the function arguments.
     auto arg_it = f->args().begin();
+    auto in_out_arg = arg_it;
     (arg_it++)->setName("in_out");
+    auto h_arg = arg_it;
     (arg_it++)->setName("h");
+    auto order_arg = arg_it;
     arg_it->setName("order");
 
     // Create a new basic block to start insertion into.
@@ -360,46 +467,131 @@ void llvm_state::add_taylor(const std::string &name, std::vector<expression> sys
     assert(bb != nullptr);
     builder->SetInsertPoint(bb);
 
-    // Create the internal array variable.
+    // Create the array of derivatives for the u variables.
     // NOTE: the static cast is fine, as we checked above that n_uvars * max_order
     // fits in 32 bits.
     auto array_type = llvm::ArrayType::get(builder->getDoubleTy(), static_cast<std::uint64_t>(n_uvars * max_order));
     assert(array_type != nullptr);
     auto diff_arr = builder->CreateAlloca(array_type, 0, "diff");
     assert(diff_arr != nullptr);
+    // Store a pointer to the beginning of the
+    // derivatives array.
+    auto base_diff_ptr
+        = builder->CreateInBoundsGEP(diff_arr, {builder->getInt32(0), builder->getInt32(0)}, "base_diff_ptr");
 
-    // Load the initial data for the state variables.
+    // Create also the accumulators for the state variables.
+    std::vector<llvm::Value *> sv_acc;
     for (std::uint32_t i = 0; i < n_eq; ++i) {
-        // Fetch the input pointer from in_out.
-        auto in_ptr = builder->CreateInBoundsGEP(&*f->args().begin(), {builder->getInt32(i)}, "in_out_ptr");
-
-        // Create the load instruction from in_out.
-        auto tmp = builder->CreateLoad(in_ptr, "in_out_load");
-
-        // Fetch the target pointer in diff_arr.
-        auto out_ptr = builder->CreateInBoundsGEP(diff_arr,
-                                                  // The offsets. The first is fixed because
-                                                  // diff_arr somehow becomes a pointer
-                                                  // to itself in the generation of the instruction,
-                                                  // and thus we need to deref it. The second
-                                                  // offset is the index into the array.
-                                                  {builder->getInt32(0), builder->getInt32(i)},
-                                                  // Name for the pointer variable.
-                                                  "diff_ptr");
-
-        // Do the copy.
-        builder->CreateStore(tmp, out_ptr);
+        sv_acc.emplace_back(builder->CreateAlloca(builder->getDoubleTy(), 0, "sv_acc_" + detail::li_to_string(i)));
     }
 
-    // Fill in the initial values for the u vars.
+    // Create the accumulator for the timestep.
+    auto h_acc = builder->CreateAlloca(builder->getDoubleTy(), 0, "h_acc");
+    builder->CreateStore(h_arg, h_acc);
+
+    // Fill-in the order-0 row of the derivatives array.
+    // Use a separate block for clarity.
+    auto *init_bb = llvm::BasicBlock::Create(get_context(), "order_0_init", f);
+    builder->CreateBr(init_bb);
+    builder->SetInsertPoint(init_bb);
+
+    // Load the initial values for the state variables from in_out.
+    for (std::uint32_t i = 0; i < n_eq; ++i) {
+        // Fetch the input pointer from in_out.
+        auto in_ptr = builder->CreateInBoundsGEP(in_out_arg, {builder->getInt32(i)}, "in_out_ptr");
+
+        // Create the load instruction from in_out.
+        auto load_inst = builder->CreateLoad(in_ptr, "in_out_load");
+
+        // Fetch the target pointer in diff_arr.
+        auto diff_ptr = builder->CreateInBoundsGEP(diff_arr,
+                                                   // The offsets. The first is fixed because
+                                                   // diff_arr somehow becomes a pointer
+                                                   // to itself in the generation of the instruction,
+                                                   // and thus we need to deref it. The second
+                                                   // offset is the index into the array.
+                                                   {builder->getInt32(0), builder->getInt32(i)},
+                                                   // Name for the pointer variable.
+                                                   "diff_ptr");
+
+        // Do the copy, both into the diff array and into the accumulators.
+        builder->CreateStore(load_inst, diff_ptr);
+        builder->CreateStore(load_inst, sv_acc[i]);
+    }
+
+    // Fill in the initial values for the other u vars in the diff array.
+    // These are not loaded directly from in_out, rather they are computed
+    // via the taylor_init machinery.
     for (auto i = static_cast<std::uint32_t>(n_eq); i < n_uvars; ++i) {
         const auto &u_ex = dc[i];
 
         // Fetch the target pointer in diff_arr.
-        auto out_ptr = builder->CreateInBoundsGEP(diff_arr, {builder->getInt32(0), builder->getInt32(i)}, "diff_ptr");
+        auto diff_ptr = builder->CreateInBoundsGEP(diff_arr, {builder->getInt32(0), builder->getInt32(i)}, "diff_ptr");
 
         // Run the initialization and store the result.
-        builder->CreateStore(u_ex.taylor_init(*this, diff_arr), out_ptr);
+        builder->CreateStore(u_ex.taylor_init(*this, diff_arr), diff_ptr);
+    }
+
+    // The for loop to fill the derivatives array. We will iterate
+    // in the [1, order) range.
+    // Init the variable for the start of the loop (i = 1).
+    auto start_val = builder->getInt32(1);
+
+    // Make the new basic block for the loop header,
+    // inserting after current block.
+    auto *preheader_bb = builder->GetInsertBlock();
+    auto *loop_bb = llvm::BasicBlock::Create(get_context(), "loop", f);
+
+    // Insert an explicit fall through from the current block to the loop_bb.
+    builder->CreateBr(loop_bb);
+
+    // Start insertion in loop_bb.
+    builder->SetInsertPoint(loop_bb);
+
+    // Start the PHI node with an entry for Start.
+    auto *variable = builder->CreatePHI(builder->getInt32Ty(), 2, "i");
+    variable->addIncoming(start_val, preheader_bb);
+
+    // TODO loop body.
+
+    // Compute the next value of the iteration.
+    // NOTE: addition works regardless of integral signedness.
+    auto *next_var = builder->CreateAdd(variable, builder->getInt32(1), "nextvar");
+
+    // Compute the end condition.
+    // NOTE: we use the unsigned less-than predicate.
+    auto *end_cond = builder->CreateICmp(llvm::CmpInst::ICMP_ULT, next_var, order_arg, "loopcond");
+
+    // Create the "after loop" block and insert it.
+    auto *loop_end_bb = builder->GetInsertBlock();
+    auto *after_bb = llvm::BasicBlock::Create(get_context(), "afterloop", f);
+
+    // Insert the conditional branch into the end of loop_end_bb.
+    builder->CreateCondBr(end_cond, loop_bb, after_bb);
+
+    // Any new code will be inserted in after_bb.
+    builder->SetInsertPoint(after_bb);
+
+    // Add a new entry to the PHI node for the backedge.
+    variable->addIncoming(next_var, loop_end_bb);
+
+    // The last step is to finalise the accumulators
+    // and to write them into in_out.
+    for (std::uint32_t i = 0; i < n_eq; ++i) {
+        auto sv = sv_acc[i];
+
+        // Compute h_acc * (derivative of order "order_arg" of the
+        // current state variable).
+        auto sv_diff_f_call = builder->CreateCall(u_diff_funcs[i], {base_diff_ptr, order_arg},
+                                                  "final_sv_diff_" + detail::li_to_string(i));
+        sv_diff_f_call->setTailCall(true);
+        auto final_sv = builder->CreateFAdd(builder->CreateLoad(sv),
+                                            builder->CreateFMul(builder->CreateLoad(h_acc), sv_diff_f_call),
+                                            "final_sv_" + detail::li_to_string(i));
+
+        // Store the result into in_out.
+        auto out_ptr = builder->CreateInBoundsGEP(in_out_arg, {builder->getInt32(i)});
+        builder->CreateStore(final_sv, out_ptr);
     }
 
     // Finish off the function.
