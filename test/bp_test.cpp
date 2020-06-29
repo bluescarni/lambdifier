@@ -59,7 +59,7 @@ int main()
           + cos((sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
                      * sin(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var)
                  + pow(cos(cos("x"_var) * "y"_var / expression{number{2.23}} / "z"_var), expression{number{2}})));
-    auto connections = compute_connections(ex);
+    auto connections = ex.compute_connections();
     auto args_vv = random_args_vv(N, 3u);
     auto args_vd = vv_to_vd(args_vv);
     // 1 - We time the autodiff
