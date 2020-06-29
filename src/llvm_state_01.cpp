@@ -300,16 +300,12 @@ std::string llvm_state::dump_function(const std::string &name) const
     }
 }
 
-// Create the function to implement the n-th order normalised derivative of the idx-th
+// Create the function to implement the n-th order normalised derivative of a
 // state variable in a Taylor system. n_uvars is the total number of
 // u variables in the decomposition, var is the u variable which is equal to
-// the first derivative of the idx-th state variable.
-llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &name, std::uint32_t n_uvars, std::uint32_t idx,
-                                               const variable &var)
+// the first derivative of the state variable.
+llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &fname, std::uint32_t n_uvars, const variable &var)
 {
-    // Compose the function name.
-    const auto fname = name + ".taylor.diff." + detail::li_to_string(idx);
-
     // TODO check if fname is present already.
 
     // Extract the index of the u variable.
@@ -369,7 +365,7 @@ llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &name, std::uin
     return f;
 }
 
-llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &, std::uint32_t, std::uint32_t, const number &)
+llvm::Function *llvm_state::taylor_add_sv_diff(const std::string &, std::uint32_t, const number &)
 {
     // TODO
     throw std::runtime_error("No support for state variables with constant derivatives yet!");
