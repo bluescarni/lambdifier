@@ -59,7 +59,7 @@ void expression::operator()(std::unordered_map<std::string, std::vector<double>>
 std::vector<std::vector<unsigned>> expression::compute_connections() const
 {
     std::vector<std::vector<unsigned>> retval;
-    unsigned node_counter = 0;
+    unsigned node_counter = 0u;
     compute_connections(retval, node_counter);
     return retval;
 }
@@ -82,8 +82,9 @@ void expression::compute_node_values(std::unordered_map<std::string, double> &in
     return m_ptr->compute_node_values(in, node_values, node_connections, node_counter);
 }
 
-std::unordered_map<std::string, double> expression::gradient(std::unordered_map<std::string, double> &in,
-                                                 const std::vector<std::vector<unsigned>> &node_connections) const
+std::unordered_map<std::string, double>
+expression::gradient(std::unordered_map<std::string, double> &in,
+                     const std::vector<std::vector<unsigned>> &node_connections) const
 {
     std::unordered_map<std::string, double> grad;
     auto node_values = compute_node_values(in, node_connections);
@@ -93,8 +94,9 @@ std::unordered_map<std::string, double> expression::gradient(std::unordered_map<
 }
 
 void expression::gradient(std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &grad,
-              const std::vector<double> &node_values, const std::vector<std::vector<unsigned>> &node_connections,
-              unsigned &node_counter, double acc) const
+                          const std::vector<double> &node_values,
+                          const std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter,
+                          double acc) const
 {
     return m_ptr->gradient(in, grad, node_values, node_connections, node_counter, acc);
 }

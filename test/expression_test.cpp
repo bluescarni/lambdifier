@@ -11,12 +11,53 @@
 using namespace lambdifier;
 using namespace Catch::literals;
 
+TEST_CASE("call operator")
+{
+    // We test on a number
+    {
+        expression ex = 2.345_num;
+        std::unordered_map<std::string, double> in;
+        REQUIRE(ex(in) == 2.345);
+    }
+    // We test on a variable
+    {
+        expression ex = "x"_var;
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        REQUIRE(ex(in)  == 2.345);
+    }
+    // We test on a function call
+    {
+        expression ex = cos("x"_var);
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        REQUIRE(ex(in) == std::cos(2.345));
+    }
+    // We test on a binary operator
+    {
+        expression ex = "x"_var / 2.345_num;
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        REQUIRE(ex(in) == 1.);
+    }
+    // We test on a deeper tree
+    {
+        expression ex = "x"_var * "y"_var + cos("x"_var*"y"_var); 
+        std::unordered_map<std::string, double> in{{"x", 2.345}, {"y", -1.}};
+        REQUIRE(ex(in) == -2.345 + std::cos(-2.345));
+    }
+    // We test the corner case of a dictionary not containing the variable.
+    {
+        expression ex = "x"_var * "y"_var; 
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        REQUIRE(ex(in) == 0.);
+    }
+}
+
 TEST_CASE("compute connections")
 {
     // We test the result on a simple polynomial x^2*y + 2
     {
         expression ex = ("x"_var * ("x"_var * "y"_var)) + 2_num;
         auto connections = ex.compute_connections();
+        REQUIRE(connections.size() == 7u);
         REQUIRE(connections[0] == std::vector<unsigned>{1, 6});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 3});
         REQUIRE(connections[2] == std::vector<unsigned>{});
@@ -29,6 +70,8 @@ TEST_CASE("compute connections")
     {
         expression ex = cos("x"_var) * 2_num + ("y"_var * "z"_var) * 2_num;
         auto connections = ex.compute_connections();
+        REQUIRE(connections.size() == 10u);
+
         REQUIRE(connections[0] == std::vector<unsigned>{1, 5});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 4});
         REQUIRE(connections[2] == std::vector<unsigned>{3});
@@ -44,6 +87,8 @@ TEST_CASE("compute connections")
     {
         expression ex = pow("x"_var, 2_num) + ("y"_var * "z"_var) * 2_num;
         auto connections = ex.compute_connections();
+        REQUIRE(connections.size() == 9u);
+
         REQUIRE(connections[0] == std::vector<unsigned>{1, 4});
         REQUIRE(connections[1] == std::vector<unsigned>{2, 3});
         REQUIRE(connections[2] == std::vector<unsigned>{});
@@ -53,6 +98,76 @@ TEST_CASE("compute connections")
         REQUIRE(connections[6] == std::vector<unsigned>{});
         REQUIRE(connections[7] == std::vector<unsigned>{});
         REQUIRE(connections[8] == std::vector<unsigned>{});
+    }
+}
+
+TEST_CASE("compute node values")
+{
+    // We test on a number
+    {
+        expression ex = 2.345_num;
+        std::unordered_map<std::string, double> in;
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 1u);
+        REQUIRE(node_values[0] == 2.345);
+    }
+    // We test on a variable
+    {
+        expression ex = "x"_var;
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 1u);
+        REQUIRE(node_values[0] == 2.345);
+    }
+    // We test on a function call
+    {
+        expression ex = cos("x"_var);
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 2u);
+        REQUIRE(node_values[0] == std::cos(2.345));
+        REQUIRE(node_values[1] == 2.345);
+    }
+    // We test on a binary operator
+    {
+        expression ex = "x"_var / 2.345_num;
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 3u);
+        REQUIRE(node_values[0] == 1);
+        REQUIRE(node_values[1] == 2.345);
+        REQUIRE(node_values[2] == 2.345);
+    }
+    // We test on a deeper tree
+    {
+        expression ex = "x"_var * "y"_var + cos("x"_var*"y"_var); 
+        std::unordered_map<std::string, double> in{{"x", 2.345}, {"y", -1.}};
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 8u);
+        REQUIRE(node_values[0] == -2.345 + std::cos(-2.345));
+        REQUIRE(node_values[1] == -2.345);
+        REQUIRE(node_values[2] == 2.345);
+        REQUIRE(node_values[3] == -1.);
+        REQUIRE(node_values[4] == std::cos(-2.345));
+        REQUIRE(node_values[5] == -2.345);
+        REQUIRE(node_values[6] == 2.345);
+        REQUIRE(node_values[7] == -1.);
+    }
+    // We test the corner case of a dictionary not containing the variable.
+    {
+        expression ex = "x"_var * "y"_var; 
+        std::unordered_map<std::string, double> in{{"x", 2.345}};
+        auto connections = ex.compute_connections();
+        auto node_values = ex.compute_node_values(in, connections);
+        REQUIRE(node_values.size() == 3u);
+        REQUIRE(node_values[0] == 0.);
+        REQUIRE(node_values[1] == 2.345);
+        REQUIRE(node_values[2] == 0.);
     }
 }
 
