@@ -34,6 +34,15 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner_base {
     virtual double evaluate(std::unordered_map<std::string, double> &) const = 0;
     virtual void evaluate(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const = 0;
     virtual expression diff(const std::string &) const = 0;
+    // Auxiliary data structures computations
+    virtual void compute_connections(std::vector<std::vector<unsigned>> &, unsigned &) = 0;
+    virtual void compute_node_values(std::unordered_map<std::string, double> &, std::vector<double> &,
+                                     const std::vector<std::vector<unsigned>> &, unsigned &)
+        = 0;
+    // Auxiliary algorithms on the expression tree
+    virtual void gradient(std::unordered_map<std::string, double> &, std::unordered_map<std::string, double> &,
+                          const std::vector<double> &, const std::vector<std::vector<unsigned>> &, unsigned &, double)
+        = 0;
     virtual llvm::Value *taylor_init(llvm_state &, llvm::Value *) const = 0;
     virtual llvm::Function *taylor_diff(llvm_state &, const std::string &, std::uint32_t,
                                         const std::unordered_map<std::uint32_t, number> &) const = 0;
@@ -92,6 +101,24 @@ struct LAMBDIFIER_DLL_PUBLIC_INLINE_CLASS expr_inner final : expr_inner_base {
         m_value.evaluate(in, out);
     }
 
+    void compute_connections(std::vector<std::vector<unsigned>> &connections, unsigned &node_counter)
+    {
+        m_value.compute_connections(connections, node_counter);
+    }
+
+    void compute_node_values(std::unordered_map<std::string, double> &in, std::vector<double> &node_values,
+                             const std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter)
+    {
+        m_value.compute_node_values(in, node_values, node_connections, node_counter);
+    }
+
+    void gradient(std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &grad,
+                  const std::vector<double> &node_values, const std::vector<std::vector<unsigned>> &node_connections,
+                  unsigned &node_counter, double acc)
+    {
+        m_value.gradient(in, grad, node_values, node_connections, node_counter, acc);
+    }
+
     expression diff(const std::string &) const final;
 
     llvm::Value *taylor_init(llvm_state &s, llvm::Value *arr) const final
@@ -145,9 +172,32 @@ public:
 
     expression(const expression &);
     expression(expression &&) noexcept;
+    // Comparison operators: note that 1+x will be not equal to x+1. Trees will be compared node by node.
+    bool operator==(const expression &other) const;
+    bool operator!=(const expression &other) const;
     // Call operators on double. Normal and batch version
     double operator()(std::unordered_map<std::string, double> &) const;
     void operator()(std::unordered_map<std::string, std::vector<double>> &, std::vector<double> &) const;
+
+    // Computation of auxiliary structures needed for ad_hoc tree algorithms (e.g. AD)
+    // Computes the input nodes for each node of the tree
+    std::vector<std::vector<unsigned>> compute_connections() const;
+    // Computes the input nodes for each node of the tree (version for recursion)
+    void compute_connections(std::vector<std::vector<unsigned>> &, unsigned &) const;
+    // Computes the output value of each node of the tree
+    std::vector<double> compute_node_values(std::unordered_map<std::string, double> &,
+                                            const std::vector<std::vector<unsigned>> &) const;
+    // Computes the output value of each node of the tree (version for recursion)
+    void compute_node_values(std::unordered_map<std::string, double> &, std::vector<double> &,
+                             const std::vector<std::vector<unsigned>> &, unsigned &) const;
+    // Computes the gradient of the expression w.r.t. all its variables using reverse mode autodiff
+    std::unordered_map<std::string, double> gradient(std::unordered_map<std::string, double> &,
+                                                     const std::vector<std::vector<unsigned>> &) const;
+    // Computes the gradient of the expression w.r.t. all its variables using reverse mode autodiff (version for
+    // recursion)
+    void gradient(std::unordered_map<std::string, double> &, std::unordered_map<std::string, double> &,
+                  const std::vector<double> &, const std::vector<std::vector<unsigned>> &, unsigned &,
+                  double = 1.) const;
 
     expression &operator=(const expression &);
     expression &operator=(expression &&) noexcept;

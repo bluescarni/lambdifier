@@ -204,7 +204,7 @@ int main()
     unsigned N = 10000u;
     double res;
     auto func = s.fetch("f");
-    auto args_vv = random_args_vv(N, 2u);
+    auto args_vv = random_args_vv(N, 3u);
     start = high_resolution_clock::now();
     for (auto &args : args_vv) {
         res = func(args.data());

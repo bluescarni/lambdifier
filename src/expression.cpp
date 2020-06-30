@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>
+
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Value.h>
@@ -42,6 +44,86 @@ llvm::Value *expression::codegen(llvm_state &s) const
     return m_ptr->codegen(s);
 }
 
+bool expression::operator==(const expression &other) const
+{
+    if (auto bo_ptr = extract<binary_operator>()) {
+        if (auto bo_ptr_other = other.extract<binary_operator>()) {
+            switch (bo_ptr->get_op()) {
+                case '+':
+                    if (bo_ptr_other->get_op() == '+') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                case '-':
+                    if (bo_ptr_other->get_op() == '-') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                case '*':
+                    if (bo_ptr_other->get_op() == '*') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+                default:
+                    assert(bo_ptr->get_op() == '/');
+                    if (bo_ptr_other->get_op() == '/') {
+                        return (bo_ptr->get_lhs() == bo_ptr_other->get_lhs())
+                               && (bo_ptr->get_rhs() == bo_ptr_other->get_rhs());
+                    } else {
+                        return false;
+                    }
+                    break;
+            }
+        } else {
+            return false;
+        }
+    } else if (auto fun_ptr = extract<function_call>()) {
+        if (auto fun_ptr_other = other.extract<function_call>()) {
+            if (fun_ptr->get_name() == fun_ptr_other->get_name()) {
+                if (fun_ptr->get_args().size() == fun_ptr_other->get_args().size()) {
+                    return std::equal(fun_ptr->get_args().begin(), fun_ptr->get_args().end(),
+                                      fun_ptr_other->get_args().begin());
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    } else if (auto num_ptr = extract<number>()) {
+        if (auto num_ptr_other = other.extract<number>()) {
+            return num_ptr->get_value() == num_ptr_other->get_value();
+        } else {
+            return false;
+        }
+    } else if (auto var_ptr = extract<variable>()) {
+        if (auto var_ptr_other = other.extract<variable>()) {
+            return var_ptr->get_name() == var_ptr_other->get_name();
+        } else {
+            return false;
+        }
+    } else {
+        // throw?
+        return false;
+    }
+}
+
+bool expression::operator!=(const expression &other) const
+{
+    return !(*this == other);
+}
+
 std::string expression::to_string() const
 {
     return m_ptr->to_string();
@@ -54,7 +136,56 @@ double expression::operator()(std::unordered_map<std::string, double> &in) const
 
 void expression::operator()(std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) const
 {
+    // We first resize out (TODO: a check on the consistency of the in sizes?)
+    decltype((*in.begin()).second.size()) n;
+    n = (in.empty()) ? 0u : (*in.begin()).second.size();
+    out.resize(n);
     return m_ptr->evaluate(in, out);
+}
+
+std::vector<std::vector<unsigned>> expression::compute_connections() const
+{
+    std::vector<std::vector<unsigned>> retval;
+    unsigned node_counter = 0u;
+    compute_connections(retval, node_counter);
+    return retval;
+}
+void expression::compute_connections(std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter) const
+{
+    return m_ptr->compute_connections(node_connections, node_counter);
+}
+std::vector<double> expression::compute_node_values(std::unordered_map<std::string, double> &in,
+                                                    const std::vector<std::vector<unsigned>> &node_connections) const
+{
+    std::vector<double> node_values(node_connections.size());
+    unsigned node_counter = 0u;
+    compute_node_values(in, node_values, node_connections, node_counter);
+    return node_values;
+}
+void expression::compute_node_values(std::unordered_map<std::string, double> &in, std::vector<double> &node_values,
+                                     const std::vector<std::vector<unsigned>> &node_connections,
+                                     unsigned &node_counter) const
+{
+    return m_ptr->compute_node_values(in, node_values, node_connections, node_counter);
+}
+
+std::unordered_map<std::string, double>
+expression::gradient(std::unordered_map<std::string, double> &in,
+                     const std::vector<std::vector<unsigned>> &node_connections) const
+{
+    std::unordered_map<std::string, double> grad;
+    auto node_values = compute_node_values(in, node_connections);
+    auto node_counter = 0u;
+    gradient(in, grad, node_values, node_connections, node_counter);
+    return grad;
+}
+
+void expression::gradient(std::unordered_map<std::string, double> &in, std::unordered_map<std::string, double> &grad,
+                          const std::vector<double> &node_values,
+                          const std::vector<std::vector<unsigned>> &node_connections, unsigned &node_counter,
+                          double acc) const
+{
+    return m_ptr->gradient(in, grad, node_values, node_connections, node_counter, acc);
 }
 
 expression expression::diff(const std::string &s) const

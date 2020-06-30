@@ -32,7 +32,6 @@ expression sin(expression e)
 
         return std::sin(args[0](v));
     });
-
     fc.set_eval_batch_f([](const std::vector<expression> &args,
                            std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) {
         if (args.size() != 1u) {
@@ -45,6 +44,24 @@ expression sin(expression e)
             out[i] = std::sin(out[i]);
         }
     });
+    fc.set_eval_num_f([](const std::vector<double> &args) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::sin (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::sin(args[0]);
+    });
+    fc.set_deval_num_f([](const std::vector<double> &args, unsigned i) {
+        if (args.size() != 1u || i != 0u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments or derivative requested when computing the derivative of std::sin");
+        }
+
+        return std::cos(args[0]);
+    });
+
     fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
         if (args.size() != 1u) {
             throw std::invalid_argument(
@@ -86,6 +103,23 @@ expression cos(expression e)
         for (auto i = 0u; i < out.size(); ++i) {
             out[i] = std::cos(out[i]);
         }
+    });
+    fc.set_eval_num_f([](const std::vector<double> &args) {
+        if (args.size() != 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::cos (1 argument was expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::cos(args[0]);
+    });
+    fc.set_deval_num_f([](const std::vector<double> &args, unsigned i) {
+        if (args.size() != 1u || i != 0u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments or derivative requested when computing the derivative of std::sin");
+        }
+
+        return -std::sin(args[0]);
     });
     fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
         if (args.size() != 1u) {
@@ -186,6 +220,56 @@ expression pow(expression e1, expression e2)
     fc.set_type(function_call::type::builtin);
     fc.set_disable_verify(true);
 
+    fc.set_eval_f([](const std::vector<expression> &args, std::unordered_map<std::string, double> &v) {
+        if (args.size() != 2u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::pow (2 arguments were expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::pow(args[0](v), args[1](v));
+    });
+    fc.set_eval_batch_f([](const std::vector<expression> &args,
+                           std::unordered_map<std::string, std::vector<double>> &in, std::vector<double> &out) {
+        if (args.size() != 2u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::pow (2 arguments were expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+        auto out0 = out; // is this allocation needed?
+        args[0](in, out0);
+        args[1](in, out);
+        for (auto i = 0u; i < out.size(); ++i) {
+            out[i] = std::pow(out0[i], out[i]);
+        }
+    });
+    fc.set_eval_num_f([](const std::vector<double> &args) {
+        if (args.size() != 2u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments when computing the std::pow (2 arguments were expected, but "
+                + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return std::pow(args[0], args[1]);
+    });
+    fc.set_deval_num_f([](const std::vector<double> &args, unsigned i) {
+        if (args.size() != 2u || i > 1u) {
+            throw std::invalid_argument(
+                "Inconsistent number of arguments or derivative requested when computing the derivative of std::pow");
+        }
+        double retval;
+        retval = (i == 0u) ? args[1] * std::pow(args[0], args[1] - 1) : std::pow(args[0], args[1]) * std::log(args[0]);
+        return retval;
+    });
+    fc.set_diff_f([](const std::vector<expression> &args, const std::string &s) {
+        if (args.size() != 2u) {
+            throw std::invalid_argument("Inconsistent number of arguments when taking the derivative of the pow (2 "
+                                        "arguments were expected, but "
+                                        + std::to_string(args.size()) + " arguments were provided");
+        }
+
+        return args[1] * pow(args[0], args[1] - expression{number{1}}) * args[0].diff(s) + pow(args[0], args[1]) * log(args[0]) * args[1].diff(s);
+    });
     return expression{std::move(fc)};
 }
 
