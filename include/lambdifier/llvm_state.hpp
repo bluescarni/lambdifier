@@ -42,11 +42,12 @@ class LAMBDIFIER_DLL_PUBLIC llvm_state
                                                      const std::vector<std::string> &);
     LAMBDIFIER_DLL_LOCAL void add_vecargs_expression(const std::string &, const std::vector<std::string> &);
     LAMBDIFIER_DLL_LOCAL void add_batch_expression(const std::string &, const std::vector<std::string> &, unsigned);
-    LAMBDIFIER_DLL_LOCAL void verify_function(llvm::Function *);
     std::uintptr_t jit_lookup(const std::string &);
     LAMBDIFIER_DLL_LOCAL void add_llvm_inst_to_value_exp_map(std::unordered_map<const llvm::Value *, expression> &,
                                                              const llvm::Instruction &,
                                                              std::optional<expression> &) const;
+    LAMBDIFIER_DLL_LOCAL llvm::Function *taylor_add_sv_diff(const std::string &, std::uint32_t, const variable &);
+    LAMBDIFIER_DLL_LOCAL llvm::Function *taylor_add_sv_diff(const std::string &, std::uint32_t, const number &);
 
 public:
     explicit llvm_state(const std::string &, unsigned = 3);
@@ -82,6 +83,8 @@ public:
     expression to_expression(const std::string &) const;
 
     void add_taylor(const std::string &, std::vector<expression>, unsigned = 20);
+
+    void verify_function(llvm::Function *);
 
 private:
     template <std::size_t>

@@ -5,7 +5,9 @@ namespace lambdifier
 {
 
 class expression;
+class variable;
+class number;
 
-}
+} // namespace lambdifier
 
 #endif
